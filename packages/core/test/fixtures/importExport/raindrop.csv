@@ -1,0 +1,4 @@
+id,title,note,excerpt,url,folder,tags,created,cover,highlights
+101,Deep Work,my note,An excerpt,https://example.com/deep,Reading,"focus, books",2023-05-01T12:00:00Z,https://img/1.jpg,"First highlight
+Second highlight"
+102,No hl,,Only excerpt,https://example.com/two,,,2023-05-02T12:00:00Z,,
