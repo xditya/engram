@@ -16,7 +16,7 @@ describe('masterKey', () => {
     const phrase = masterKey.toPhrase(entropy);
     expect(phrase.split(' ')).toHaveLength(12);
     expect(masterKey.fromPhrase('  ' + phrase.toUpperCase() + '\n')).toEqual(entropy);
-    expect(() => masterKey.fromPhrase(phrase.replace(/^\w+/, 'zebra'))).toThrow();
+    expect(() => masterKey.fromPhrase(phrase.replace(/^\w+/, 'zzzzz'))).toThrow();
     expect(() => masterKey.fromPhrase('abandon abandon abandon')).toThrow();
   });
   it('derives distinct deterministic keys', () => {

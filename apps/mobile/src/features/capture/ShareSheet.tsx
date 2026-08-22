@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { extract, type Item, type ItemType } from '@engram/core';
 import { Icon, type IconName } from '../../icons/Icon';
-import { engram, type ShareIntentLike } from '../../lib/engram';
+import { engram, useToast, type ShareIntentLike } from '../../lib/engram';
 import { useTheme } from '../../theme/useTheme';
 import { Button, Text } from '../../ui';
 import { splitTags } from './tags';
@@ -32,6 +32,7 @@ export function ShareSheet({ intent, onDone }: { intent: ShareIntentLike; onDone
   const insets = useSafeAreaInsets();
   const [field, setField] = useState('');
   const [saved, setSaved] = useState(false);
+  const show = useToast((s) => s.show);
   const d = describe(intent);
 
   const save = async () => {
@@ -39,14 +40,16 @@ export function ShareSheet({ intent, onDone }: { intent: ShareIntentLike; onDone
     const e = engram();
     const { note, tags } = splitTags(field);
     let items: Item[];
-    if (intent.webUrl) items = [await e.capture.saveUrl(intent.webUrl, { note: note ?? (intent.text !== intent.webUrl ? intent.text ?? undefined : undefined), tags })];
-    else {
-      items = await e.capture.fromShareIntent(intent);
-      for (const it of items) {
-        if (tags.length) e.db.tags.set(it.id, [...new Set([...e.db.tags.of(it.id), ...tags])]);
-        if (note) e.db.items.update(it.id, { body: it.body ? `${it.body}\n\n${note}` : note });
+    try {
+      if (intent.webUrl) items = [await e.capture.saveUrl(intent.webUrl, { note: note ?? (intent.text !== intent.webUrl ? intent.text ?? undefined : undefined), tags })];
+      else {
+        items = await e.capture.fromShareIntent(intent);
+        for (const it of items) {
+          if (tags.length) e.db.tags.set(it.id, [...new Set([...e.db.tags.of(it.id), ...tags])]);
+          if (note) e.db.items.update(it.id, { body: it.body ? `${it.body}\n\n${note}` : note });
+        }
       }
-    }
+    } catch (err) { show(`Couldn't save: ${(err as Error).message}`); return; }
     setSaved(true);
     setTimeout(() => onDone(items), 800);
   };

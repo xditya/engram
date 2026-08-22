@@ -20,7 +20,8 @@ const ON_DEVICE_SECONDS_PER_ITEM = 6; // mid-range phone classify; embed is negl
 
 // outputTokens: classify returns ~120 tokens of JSON; pass 0 for embeddings.
 export function estimateCost(count: number, avgChars: number, provider: ProviderId, model: string, outputTokens = 120): { usd: number; seconds?: number } {
-  if (isFree(provider)) return { usd: 0, seconds: count * ON_DEVICE_SECONDS_PER_ITEM };
+  if (provider === 'on-device') return { usd: 0, seconds: count * ON_DEVICE_SECONDS_PER_ITEM };
+  if (isFree(provider)) return { usd: 0 }; // LAN endpoint: free, but not on this phone
   const table = PRICE[provider] ?? {};
   const [inP, outP] = table[model] ?? table['*'] ?? [0.5, 1.5];
   return { usd: (count * (estimateTokens(avgChars) * inP + outputTokens * outP)) / 1e6 };

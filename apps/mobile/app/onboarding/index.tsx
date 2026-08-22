@@ -17,6 +17,7 @@ export default function Welcome() {
         </Animated.View>
         <Text size="display" weight={600}>engram</Text>
         <Text color="text2" style={{ textAlign: 'center' }}>Save anything. Find it later. It never leaves your device.</Text>
+        <Button title="I already use engram on another device" variant="text" onPress={() => router.push('/sync/link')} />
       </View>
     </Step>
   );

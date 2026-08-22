@@ -26,6 +26,7 @@ export function createCapture(ctx: Pick<JobCtx, 'platform' | 'db'> & { queue: Qu
   const capture = {
     async saveUrl(raw: string, o: CaptureOpts = {}): Promise<Item> {
       const url = sync.normalizeUrl(raw);
+      if (!isUrl(url)) throw new Error('not a link');
       const existing = byUrl(url);
       if (existing) {
         // same url twice: merge the note instead of a second card

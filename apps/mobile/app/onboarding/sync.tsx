@@ -30,10 +30,12 @@ export default function Sync() {
     try {
       if (backend === 'gdrive') await signInGoogle(engram.platform.keys);
       if (backend === 'webdav') await engram.secrets.set('webdavPassword', dav.password);
-      await engram.sync.masterKey.ensure();
       patch('sync', backend === 'webdav' ? { backend, webdav: { baseUrl: dav.baseUrl.trim(), username: dav.username.trim() } } : { backend });
-      // The phrase screen is the last step; onboarding is over once it is reached.
+      // The phrase (or link) screen is the last step; onboarding is over once it is reached.
       update({ onboarded: true });
+      // Storage that already holds a library belongs to an existing key: link this device instead of minting one.
+      if (await (await engram.sync.getStorage())?.getManifest().catch(() => null)) { router.replace('/sync/link'); return; }
+      await engram.sync.masterKey.ensure();
       router.replace('/sync/phrase');
     } catch (e) {
       setError(backend === 'gdrive' ? 'Google sign-in did not complete.' : (e as Error).message);

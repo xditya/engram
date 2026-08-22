@@ -41,10 +41,14 @@ export default function Intelligence() {
     const ok = await od.ready();
     setDl(null);
     setReady(ok);
-    if (ok) { set({ mode: 'on-device', summaries: false }); engram?.queue.reenqueueSkipped(); void engram?.drain(); }
+    if (ok) set({ mode: 'on-device', summaries: false });
     else show("Couldn't download the model. Try again on Wi-Fi.");
   };
-  useEffect(() => { if (s.mode === 'on-device' && offered) void engram!.platform.onDevice!.ready().then(setReady); }, [engram, offered, s.mode]);
+  // Loading the app-wide instance is what lets skipped jobs run again (the download above was a separate instance).
+  useEffect(() => {
+    if (s.mode !== 'on-device' || !offered) return;
+    void engram!.platform.onDevice!.ready().then((ok) => { setReady(ok); if (ok) { engram!.queue.reenqueueSkipped(); void engram!.drain(); } });
+  }, [engram, offered, s.mode]);
 
   // Bring a key
   const seg = segOf(s.provider);
@@ -54,15 +58,18 @@ export default function Intelligence() {
   const [adv, setAdv] = useState(false);
   const [models, setModels] = useState<{ chat: string; embed: string; base: string }>({ chat: s.chatModel ?? '', embed: s.embedModel ?? '', base: s.baseUrl ?? '' });
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const gen = useRef(0); // a check that finished after the provider or key changed must not land
   useEffect(() => { if (engram) setKey(engram.secrets.get('apiKey') ?? ''); }, [engram]);
 
   const needsKey = seg !== 'custom' || (s.provider ? s.provider in ai.PRESETS && ai.PRESETS[s.provider as keyof typeof ai.PRESETS].needsKey : false);
   const runCheck = (k: string, settings: IntelligenceSettings) => {
     clearTimeout(timer.current);
-    if (!k && needsKey) { setCheck({ state: 'idle' }); return; }
+    const g = ++gen.current;
+    if (!k && needsKey) { setCheck({ state: 'idle' }); void engram?.secrets.set('apiKey', null); return; }
     setCheck({ state: 'checking' });
     timer.current = setTimeout(async () => {
       const r = await checkKey(settings, k.trim());
+      if (g !== gen.current) return;
       setCheck(r);
       if (r.state === 'ok' && engram) { await engram.secrets.set('apiKey', k.trim() || null); engram.queue.reenqueueSkipped(); void engram.drain(); }
     }, 600);
@@ -70,9 +77,12 @@ export default function Intelligence() {
   const onKey = (k: string) => { setKey(k); runCheck(k, s); };
   const choose = (p: KeyProvider, extra: Partial<IntelligenceSettings> = {}) => {
     const next: Partial<IntelligenceSettings> = { mode: 'key', provider: p, baseUrl: undefined, chatModel: undefined, embedModel: undefined, ...extra };
+    // A key belongs to one provider: drop it on a switch so jobs skip (and revive on a good check) rather than fail 401s.
+    const k = p === s.provider ? key : '';
+    if (p !== s.provider) { setKey(''); void engram?.secrets.set('apiKey', null); }
     set(next);
     setModels({ chat: next.chatModel ?? '', embed: next.embedModel ?? '', base: next.baseUrl ?? '' });
-    runCheck(key, { ...s, ...next });
+    runCheck(k, { ...s, ...next });
   };
   const paste = async () => { const t = (await Clipboard.getStringAsync()).trim(); if (t) onKey(t); };
   const commitAdvanced = () => {

@@ -41,7 +41,8 @@ function useCaptureIntents() {
   useEffect(() => {
     if (!engram || !url) return;
     const { hostname, path, queryParams } = Linking.parse(url);
-    if ((hostname ?? path)?.replace(/^\//, '') !== 'save') return;
+    // engram://save?url=… parses as hostname 'save'; https://engram.xditya.me/save?url=… as path '/save'.
+    if ((path?.replace(/^\//, '') || hostname) !== 'save') return;
     const target = typeof queryParams?.url === 'string' ? queryParams.url : null;
     if (!target) return;
     engram.capture.saveUrl(target, { note: typeof queryParams?.note === 'string' ? queryParams.note : undefined })

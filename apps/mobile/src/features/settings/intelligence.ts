@@ -70,4 +70,5 @@ export function stopBackfill(e: Engram) {
 
 export const costLine = (usd: number, seconds: number | undefined, model: string): string =>
   seconds != null ? `Free · about ${Math.max(1, Math.round(seconds / 60))} min on this device`
+    : usd === 0 ? `Free with ${model || 'the default model'}`
     : `≈ $${usd < 0.01 && usd > 0 ? '0.01' : usd.toFixed(2)} with ${model || 'the default model'}`;

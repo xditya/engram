@@ -75,9 +75,24 @@ export async function createEngram(): Promise<Engram> {
 
   const queue = createJobs({ platform, db, secrets, onDevice: platform.onDevice });
   let draining: Promise<void> | null = null;
+  let wake: ReturnType<typeof setTimeout> | undefined;
   const drain = (): Promise<void> => draining ??= (async () => {
-    try { while ((await queue.tick()) > 0) { /* until idle */ } } finally { draining = null; }
+    try { while ((await queue.tick()) > 0) { /* until idle */ } } finally {
+      draining = null;
+      // Backed-off jobs come back by themselves instead of waiting for the next foreground.
+      const at = queue.nextRunAt();
+      clearTimeout(wake);
+      if (at != null) wake = setTimeout(() => void drain(), Math.max(1000, at - platform.now()));
+    }
   })();
+
+  // Load the on-device model (downloading it on first use) only on Wi-Fi; jobs skip until it is loaded.
+  const loadOnDevice = async () => {
+    const od = platform.onDevice;
+    if (!od || od.loaded || getSettings().intelligence.mode !== 'on-device' || RN.OS === 'web') return;
+    if ((await Network.getNetworkStateAsync().catch(() => null))?.type !== Network.NetworkStateType.WIFI) return;
+    if (await od.ready()) { queue.reenqueueSkipped(); void drain(); }
+  };
 
   const sync = createSyncService({ platform, db, secrets, afterSync: drain });
   const capture = createCapture({ platform, db, queue, sql: platform.db, drain });
@@ -86,11 +101,13 @@ export async function createEngram(): Promise<Engram> {
   const syncOn = () => getSettings().sync.backend !== 'off';
   let t: ReturnType<typeof setTimeout> | undefined;
   events.on(() => { if (!syncOn()) return; clearTimeout(t); t = setTimeout(() => void sync.syncNow(), 5000); });
-  platform.net.onChange((online) => { if (online && syncOn()) void sync.syncNow(); });
+  platform.net.onChange((online) => { if (!online) return; void drain(); void loadOnDevice(); if (syncOn()) void sync.syncNow(); });
   AppState.addEventListener('change', (s) => { if (s === 'active') { void drain(); if (syncOn()) void sync.syncNow(); } });
   useSettings.subscribe((s, prev) => { if (s.sync !== prev.sync) { sync.reset(); if (s.sync.backend !== 'off') void sync.syncNow(); } });
+  useSettings.subscribe((s, prev) => { if (s.intelligence.mode !== prev.intelligence.mode) void loadOnDevice(); });
   void sync.registerBackground();
   void drain();
+  void loadOnDevice();
 
   return { platform, db, queue, capture, sync, secrets, deviceId, events, drain, onDeviceReason };
 }

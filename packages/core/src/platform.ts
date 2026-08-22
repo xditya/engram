@@ -26,6 +26,7 @@ export interface OnDeviceAI {
   complete(req: { system: string; user: string; json?: boolean; maxTokens: number }): Promise<string>;
   embed(texts: string[]): Promise<Float32Array[]>;
   ready(): Promise<boolean>;
+  loaded?: boolean; // set once ready() succeeded; until then complete/embed would start a model download
 }
 
 export interface Platform {

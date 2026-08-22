@@ -152,13 +152,16 @@ describe('queue', () => {
   it('skips provider jobs while off, re-enqueues and completes when a provider appears', async () => {
     const s = setup();
     s.q.enqueueFor('i1', ['classify', 'embed']);
-    expect(await s.q.tick()).toBe(2);
+    s.q.enqueueFor('i1', ['classify']); // duplicate: ignored while the first is pending
+    expect(await s.q.tick()).toBe(1); // embed waits for classify to settle
+    expect(await s.q.tick()).toBe(1);
     expect(s.jobs().map((j) => j.status)).toEqual(['skipped', 'skipped']);
     expect(s.jobs()[0]!.error).toBe('no provider');
     s.setProvider(okProvider());
     s.setSettings({ mode: 'key', provider: 'openai', summaries: true, describeImages: false });
     expect(s.q.reenqueueSkipped()).toBe(2);
-    expect(await s.q.tick()).toBe(2);
+    expect(await s.q.tick()).toBe(1);
+    expect(await s.q.tick()).toBe(1);
     expect(await s.q.tick()).toBe(0);
     expect(s.jobs().map((j) => j.status)).toEqual(['done', 'done']);
     expect(s.updates[0]).toEqual(['i1', { type: 'recipe', summary: 'S' }]);
@@ -211,8 +214,8 @@ describe('queue', () => {
     s.setProvider(okProvider());
     s.setSettings({ mode: 'key', provider: 'openai', chatModel: 'gpt-4o', summaries: true, describeImages: false, monthlyBudgetUsd: 0.004 });
     s.q.enqueueFor('i1', ['classify']);
-    s.q.enqueueFor('i1', ['classify']);
     await s.q.tick();
+    s.q.enqueueFor('i1', ['classify']);
     await s.q.tick();
     const st = s.jobs().map((j) => [j.status, j.error]);
     expect(st[0]).toEqual(['done', null]);

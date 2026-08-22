@@ -34,7 +34,11 @@ export async function runEnrichers(url: string, opts: { html?: string; platform:
     try {
       const r = await opts.platform.fetchText(url, { maxBytes: MAX_HTML_BYTES });
       html = r.html; contentType = r.contentType;
-    } catch { /* offline or blocked: url-only enrichers still run */ }
+    } catch (e) {
+      // An HTTP status means the host answered (a pdf/image url still enriches by extension); anything else is
+      // offline, and the job must retry with backoff instead of finishing with a bare-domain card.
+      if (!/^\d{3}\s/.test((e as Error).message ?? '')) throw new Error(`page fetch failed: ${(e as Error).message}`);
+    }
   }
   if (html != null) html = capHtml(html);
   const site = SITES.map((e) => [e, e.match(u, contentType)] as const).filter(([, p]) => p > 0).sort((a, b) => b[1] - a[1])[0]?.[0];

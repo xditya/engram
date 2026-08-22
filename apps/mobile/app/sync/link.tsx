@@ -13,8 +13,8 @@ import { Button, ProgressLine, Screen, Text } from '../../src/ui';
 
 // ?side=show: this device already has the library and shows a code. Default: this device is new and enters one.
 export default function Link() {
-  const { side } = useLocalSearchParams<{ side?: string }>();
-  return side === 'show' ? <ShowCode /> : <EnterCode />;
+  const { side, code } = useLocalSearchParams<{ side?: string; code?: string }>();
+  return side === 'show' ? <ShowCode /> : <EnterCode scanned={code} />;
 }
 
 function ShowCode() {
@@ -26,27 +26,36 @@ function ShowCode() {
   const [error, setError] = useState('');
   const known = useRef<Set<string>>(new Set());
 
+  // An offer is the master key sealed under six digits; it must not outlive the screen that showed it.
+  const live = useRef<string | null>(null);
+  async function revoke() {
+    const c = live.current;
+    live.current = null;
+    if (c && engram) await (await engram.sync.getEngine().catch(() => null))?.deleteLinkOffer(c);
+  }
   async function offer() {
     if (!engram) return;
     setState('waiting');
     try {
+      await revoke();
       const engine = await engram.sync.getEngine();
       const entropy = await engram.sync.masterKey.get();
       if (!engine || !entropy) throw new Error('Turn on sync before linking a device.');
       known.current = new Set(Object.keys((await readDevices(engine)).devices));
       const next = newLinkCode();
       await engine.writeLinkOffer(next, entropy);
+      live.current = next;
       setCode(next);
     } catch (e) { setError((e as Error).message); setState('error'); }
   }
-  useEffect(() => { void offer(); }, [engram]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { void offer(); return () => { void revoke(); }; }, [engram]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // A new device announces itself in the manifest once it has the key; poll for it until the code expires.
   useEffect(() => {
     if (!engram || !code || state !== 'waiting') return;
     const started = Date.now();
     const t = setInterval(async () => {
-      if (Date.now() - started > LINK_TTL_MS) { setState('expired'); return; }
+      if (Date.now() - started > LINK_TTL_MS) { setState('expired'); void revoke(); return; }
       const engine = await engram.sync.getEngine();
       if (!engine) return;
       const ids = Object.keys((await readDevices(engine).catch(() => ({ devices: {} }))).devices);
@@ -96,7 +105,7 @@ function ShowCode() {
   );
 }
 
-function EnterCode() {
+function EnterCode({ scanned }: { scanned?: string }) {
   const { c, space, font } = useTheme();
   const router = useRouter();
   const { engram } = useEngram();
@@ -110,6 +119,8 @@ function EnterCode() {
   const [linkedTo, setLinkedTo] = useState<string | null>(null);
   const cards = useLiveQuery((e) => e.platform.db.query<{ n: number }>('SELECT count(*) AS n FROM items WHERE deleted_at IS NULL')[0]?.n ?? 0, []) ?? 0;
   const scanning = useRef(false);
+  // Arrived through an engram://link?code= QR scanned with the system camera.
+  useEffect(() => { if (scanned && engram && backend !== 'off') void submit(scanned); }, [scanned, engram, backend]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function submit(raw: string) {
     const digits = raw.replace(/\D/g, '').slice(-6);

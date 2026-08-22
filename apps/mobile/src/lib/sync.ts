@@ -8,7 +8,8 @@ import { googleAccessToken } from './auth';
 import { getSettings, type SyncBackend } from './settings';
 import type { Secrets } from './secrets';
 
-export type SyncState = 'off' | 'upToDate' | 'syncing' | 'unreachable' | 'full';
+// locked: the store rejects this device (wrong key, or it was removed); signing in again cannot help.
+export type SyncState = 'off' | 'upToDate' | 'syncing' | 'unreachable' | 'full' | 'locked';
 export type SyncStatus = { state: SyncState; at: number | null; error?: string };
 export const useSyncStatus = create<SyncStatus>(() => ({ state: getSettings().sync.backend === 'off' ? 'off' : 'upToDate', at: null }));
 
@@ -38,6 +39,7 @@ export function createSyncService(o: { platform: Platform; db: EngramDb; secrets
       return password == null ? null : storage.createWebDavAdapter({ ...s.webdav, password });
     }
     if (backend === 'icloud' && RN.OS === 'ios') return (require('@engram/db-rn') as typeof import('@engram/db-rn')).createICloudAdapter();
+    if (backend !== 'off') throw new Error(`${backend} is not set up on this device`);
     return null;
   }
 
@@ -74,21 +76,25 @@ export function createSyncService(o: { platform: Platform; db: EngramDb; secrets
     return engine;
   }
 
-  let running: Promise<void> | null = null;
-  const syncNow = (): Promise<void> => running ??= (async () => {
+  // Resolves true when the sync completed; the status store carries the failure otherwise.
+  let running: Promise<boolean> | null = null;
+  const syncNow = (): Promise<boolean> => running ??= (async () => {
     try {
       const e = await getEngine();
-      if (!e) { useSyncStatus.setState({ state: 'off' }); return; }
+      if (!e) { useSyncStatus.setState({ state: 'off' }); return false; }
       useSyncStatus.setState({ state: 'syncing', error: undefined });
       const onWifi = (await Network.getNetworkStateAsync().catch(() => null))?.type === Network.NetworkStateType.WIFI;
       const originalsOffline = (await platform.keys.get('originalsOffline')) === '1';
       await e.sync({ originals: onWifi ? 'eager' : 'lazy', originalsOffline });
       useSyncStatus.setState({ state: 'upToDate', at: platform.now(), error: undefined });
       await o.afterSync();
+      return true;
     } catch (err) {
       const error = err instanceof Error ? err.message : String(err);
-      // ponytail: "full" is sniffed from the message; adapters throw plain Errors with the HTTP status in them.
-      useSyncStatus.setState({ state: /quota|full|507|insufficient/i.test(error) ? 'full' : 'unreachable', error });
+      // ponytail: the state is sniffed from the message; adapters throw plain Errors with the HTTP status in them.
+      const state = /quota|full|507|insufficient/i.test(error) ? 'full' : /key mismatch|removed from the store/i.test(error) ? 'locked' : 'unreachable';
+      useSyncStatus.setState({ state, error });
+      return false;
     } finally { running = null; }
   })();
 
@@ -100,5 +106,6 @@ export function createSyncService(o: { platform: Platform; db: EngramDb; secrets
   }
 
   const getStorage = () => adapter(getSettings().sync.backend);
-  return { getEngine, getStorage, syncNow, masterKey, registerBackground, reset: () => { engine = null; }, status: useSyncStatus };
+  const reset = () => { engine = null; if (getSettings().sync.backend === 'off') useSyncStatus.setState({ state: 'off', at: null, error: undefined }); };
+  return { getEngine, getStorage, syncNow, masterKey, registerBackground, reset, status: useSyncStatus };
 }

@@ -16,7 +16,11 @@ export async function addFile(
   ctx: Pick<JobCtx, 'platform' | 'db'>, itemId: string, role: FileRole, bytes: Uint8Array, mime: string | null,
   dims: { w?: number | null; h?: number | null } = {},
 ): Promise<string> {
-  const hash = crypto.blake3Hex(bytes);
+  let hash = crypto.blake3Hex(bytes);
+  // files.hash is the row key, so identical bytes on a second item would steal the first item's row.
+  // ponytail: that second item gets its own key (and blob) instead of sharing; refcounted blobs if space matters.
+  const owner = ctx.platform.db.query<{ item_id: string }>('SELECT item_id FROM files WHERE hash = ? AND deleted_at IS NULL', [hash])[0]?.item_id;
+  if (owner && owner !== itemId) hash = crypto.blake3Hex(new TextEncoder().encode(`${hash}:${itemId}`));
   await ctx.platform.files.write(hash, bytes);
   ctx.db.files.add({ hash, item_id: itemId, role, mime, bytes: bytes.length, w: dims.w ?? null, h: dims.h ?? null, blurhash: null });
   return hash;
@@ -32,7 +36,9 @@ async function download(url: string): Promise<{ bytes: Uint8Array; mime: string 
 
 export function createJobs(ctx: JobCtx): Queue {
   const { platform, db, secrets } = ctx;
-  const provider = () => ai.createProvider(getSettings().intelligence, { apiKey: secrets.get('apiKey') ?? undefined }, { fetch, onDevice: ctx.onDevice });
+  // The on-device model is offered to jobs only once ready() loaded it, so a job never starts the download.
+  const onDevice = () => (ctx.onDevice?.loaded ? ctx.onDevice : undefined);
+  const provider = () => ai.createProvider(getSettings().intelligence, { apiKey: secrets.get('apiKey') ?? undefined }, { fetch, onDevice: onDevice() });
   const month = () => new Date().toISOString().slice(0, 7);
 
   const handlers: Partial<Record<JobKind, (itemId: string) => Promise<void>>> = {
@@ -44,6 +50,7 @@ export function createJobs(ctx: JobCtx): Queue {
       const html = reader ? new TextDecoder().decode(await platform.files.read(reader.hash)) : undefined;
       const { files: pending = [], ...patch } = await extract.runEnrichers(item.url, { html, platform });
       if (item.body) delete patch.body; // a note or quote the user typed wins over page text
+      if (item.type === 'quote' || item.type === 'note') delete patch.type; // the user chose that type
       if (Object.keys(patch).length) db.items.update(itemId, patch);
       for (const pf of pending) {
         try {
@@ -90,12 +97,16 @@ export function createJobs(ctx: JobCtx): Queue {
     db: platform.db,
     now: platform.now,
     provider,
-    embedder: () => ai.createEmbedder(getSettings().intelligence, provider(), { onDevice: ctx.onDevice }),
+    embedder: () => ai.createEmbedder(getSettings().intelligence, provider(), { onDevice: onDevice() }),
     settings: () => getSettings().intelligence,
     platform: { ocr: platform.ocr, files: platform.files },
     writer: {
       update: (id, patch) => db.items.update(id, patch),
-      addTags: (id, tags, source) => { for (const t of tags) db.tags.add(id, t, source); },
+      addTags: (id, tags, source) => {
+        // A tag the user removed from this card stays removed on re-classification.
+        const gone = new Set(platform.db.query<{ tag: string }>('SELECT tag FROM tags WHERE item_id = ? AND deleted_at IS NOT NULL', [id]).map((r) => r.tag));
+        for (const t of tags) if (!gone.has(t)) db.tags.add(id, t, source);
+      },
       getItem: (id) => db.items.get(id) ?? null,
       filesOf: (id) => db.files.of(id),
     },

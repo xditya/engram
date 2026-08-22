@@ -23,8 +23,9 @@ export function createSecrets(keys: KeyStore) {
     // 16 bytes of entropy = the master key the user holds as 12 words. Generated on first sync setup.
     master: {
       get: async (): Promise<Uint8Array | null> => { const h = await keys.get('master'); return h ? hex.decode(h) : null; },
-      set: (entropy: Uint8Array) => keys.set('master', hex.encode(entropy)),
-      clear: () => keys.delete('master'),
+      // A new key means the old phrase no longer applies; 'phraseSaved' describes the key it sits next to.
+      set: async (entropy: Uint8Array) => { await keys.delete('phraseSaved'); await keys.set('master', hex.encode(entropy)); },
+      clear: async () => { await keys.delete('phraseSaved'); await keys.delete('master'); },
     },
   };
 }

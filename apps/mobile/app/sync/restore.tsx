@@ -44,7 +44,7 @@ export default function Restore() {
       router.replace('/');
     } catch (e) {
       await engram.sync.masterKey.clear();
-      const mismatch = /key mismatch|bad manifest|invalid recovery/i.test((e as Error).message);
+      const mismatch = /key mismatch|bad manifest|invalid recovery|invalid tag/i.test((e as Error).message);
       if (mismatch && ++tries.current >= MAX_TRIES) { router.replace('/sync/recovery-failure' as Href); return; }
       setMessage(mismatch ? "These words don't open the library in this storage. Check each word against your note." : (e as Error).message);
     } finally { setBusy(false); }

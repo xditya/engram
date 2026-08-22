@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useEngram, useLiveQuery, useSettings, useSyncStatus } from '../../src/lib/engram';
 import { useAppearance } from '../../src/features/settings/appearance';
 import { KEY_PAGES } from '../../src/features/settings/intelligence';
@@ -20,17 +20,18 @@ export default function Settings() {
   const scheme = useAppearance((a) => a.scheme);
   const trashed = useLiveQuery((e) => e.db.items.list({ view: 'trash', limit: 1000 }).length, []) ?? 0;
   const [phraseUnsaved, setPhraseUnsaved] = useState(false);
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     if (!engram) return;
     Promise.all([engram.secrets.master.get(), phraseSaved.get(engram)])
       .then(([key, saved]) => setPhraseUnsaved(!!key && !saved)).catch(() => {});
-  }, [engram, s.sync.backend]);
+  }, [engram, s.sync.backend]));
 
   const intel = s.intelligence.mode === 'off' ? 'Off' : s.intelligence.mode === 'on-device' ? 'On this device'
     : KEY_PAGES[s.intelligence.provider ?? '']?.name ?? s.intelligence.provider ?? 'Key';
   const syncValue = sync.state === 'off' ? SYNC_NAME.off
     : sync.state === 'syncing' ? 'Syncing…'
     : sync.state === 'unreachable' ? `Can't reach ${SYNC_NAME[s.sync.backend]}`
+    : sync.state === 'locked' ? "Can't open the library"
     : sync.state === 'full' ? `${SYNC_NAME[s.sync.backend]} is full`
     : sync.at ? `Up to date · ${hhmm(sync.at)}` : 'Up to date';
   const go = (path: string) => () => router.push(path as never);

@@ -25,7 +25,7 @@ export type EmbedQuery = (text: string) => Promise<{ vec: Float32Array; model: s
 // Plain search when there are <2 plain words, no embedder, or no embeddings for that model.
 export async function hybrid(db: Database, query: string, embedQuery?: EmbedQuery, opts: SearchOpts = {}): Promise<Item[]> {
   const p = parse(query, opts.now);
-  if (!embedQuery || p.plainWords < 2) return runParsed(db, p, opts);
+  if (!embedQuery || p.plainWords < 1) return runParsed(db, p, opts);
   const text = p.chips.filter((t) => !t.neg && t.kind !== 'op').map((t) => t.value).join(' ');
   const q = await embedQuery(text);
   if (!q) return runParsed(db, p, opts);

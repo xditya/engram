@@ -36,7 +36,7 @@ export async function run(e: Engram, kind: 'everything' | 'obsidian', onProgress
   const prog: Progress = { cards: 0, cardsTotal: data.items.length, files: 0, filesTotal: files.length, done: false };
   const zip = new JSZip();
   const entries = kind === 'everything'
-    ? importExport.buildExportBundle({ ...data, files: [] })
+    ? importExport.buildExportBundle({ ...data, files })
     : importExport.toObsidianVault(data.items, data.tags);
   for (const f of entries) zip.file(f.path, f.content);
   prog.cards = prog.cardsTotal;

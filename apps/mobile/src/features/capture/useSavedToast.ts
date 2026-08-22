@@ -17,7 +17,10 @@ export function useSavedToast() {
       return true;
     };
     if (check()) return;
-    const off = e.events.on(() => { if (check()) { off(); clearTimeout(t); } });
-    const t = setTimeout(off, 60_000); // ponytail: give up listening after a minute; toast just stays "Saved"
+    // A skipped job (no provider yet) changes only the jobs table, which never emits, hence the poll.
+    const stop = () => { off(); clearInterval(poll); clearTimeout(t); };
+    const off = e.events.on(() => { if (check()) stop(); });
+    const poll = setInterval(() => { if (check()) stop(); }, 2000);
+    const t = setTimeout(stop, 60_000); // ponytail: give up listening after a minute; toast just stays "Saved"
   }, [show]);
 }

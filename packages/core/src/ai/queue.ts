@@ -38,6 +38,8 @@ class Skip extends Error {}
 export function createQueue(o: QueueOptions) {
   const db = o.db;
   let paused = false;
+  // Rows left 'running' by a process that died mid-job would otherwise never be picked again.
+  db.exec("UPDATE jobs SET status='pending' WHERE status='running'");
   const id = o.id ?? (() => `${o.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`);
 
   const set = (job: Job, patch: Partial<Job>) => {
@@ -123,7 +125,10 @@ export function createQueue(o: QueueOptions) {
     async tick(): Promise<number> {
       if (paused) return 0;
       const limit = o.concurrency ?? (o.provider()?.id === 'on-device' ? 1 : 2);
-      const jobs = db.query<Job>("SELECT * FROM jobs WHERE status='pending' AND (run_after IS NULL OR run_after<=?) ORDER BY created_at LIMIT ?", [o.now(), limit]);
+      // An embed waits for its item's classify so the vector includes the AI tags.
+      const jobs = db.query<Job>(`SELECT * FROM jobs j WHERE status='pending' AND (run_after IS NULL OR run_after<=?)
+        AND NOT (kind='embed' AND EXISTS (SELECT 1 FROM jobs c WHERE c.item_id=j.item_id AND c.kind='classify' AND c.status IN ('pending','running')))
+        ORDER BY created_at LIMIT ?`, [o.now(), limit]);
       if (!jobs.length) return 0;
       db.exec(`UPDATE jobs SET status='running' WHERE id IN (${jobs.map(() => '?').join(',')})`, jobs.map((j) => j.id));
       await Promise.all(jobs.map(runOne));
@@ -132,7 +137,10 @@ export function createQueue(o: QueueOptions) {
     enqueueFor(itemId: string, kinds: JobKind[]) {
       const now = o.now();
       db.transaction(() => {
-        for (const kind of kinds) db.exec("INSERT INTO jobs (id, item_id, kind, status, attempts, run_after, created_at) VALUES (?,?,?,'pending',0,?,?)", [id(), itemId, kind, now, now]);
+        for (const kind of kinds) {
+          if (db.query("SELECT 1 FROM jobs WHERE item_id=? AND kind=? AND status IN ('pending','running')", [itemId, kind]).length) continue;
+          db.exec("INSERT INTO jobs (id, item_id, kind, status, attempts, run_after, created_at) VALUES (?,?,?,'pending',0,?,?)", [id(), itemId, kind, now, now]);
+        }
       });
     },
     // Call when a provider appears, settings change, or ocr becomes available. Returns how many were revived.
@@ -142,6 +150,8 @@ export function createQueue(o: QueueOptions) {
       db.exec(`UPDATE jobs SET status='pending', attempts=0, error=NULL, run_after=? WHERE status='skipped' AND kind IN (${ph})`, [o.now(), ...kinds]);
       return n;
     },
+    // Earliest future run_after among pending jobs, or null; the app arms a timer from it.
+    nextRunAt(): number | null { return db.query<{ t: number | null }>("SELECT MIN(run_after) t FROM jobs WHERE status='pending' AND run_after>?", [o.now()])[0]?.t ?? null; },
     retry(jobId: string) { db.exec("UPDATE jobs SET status='pending', attempts=0, error=NULL, run_after=? WHERE id=?", [o.now(), jobId]); },
     pause() { paused = true; },
     resume() { paused = false; },

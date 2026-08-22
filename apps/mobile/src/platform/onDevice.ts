@@ -37,7 +37,7 @@ export function createOnDevice(onProgress?: OnDeviceProgress): OnDeviceAI | unde
   // ponytail: one generation at a time; the queue already runs on-device with concurrency 1.
   let busy: Promise<unknown> = Promise.resolve();
 
-  return {
+  const api: OnDeviceAI = {
     complete({ system, user, json }) {
       const run = async () => {
         const m = await getLlm();
@@ -57,8 +57,9 @@ export function createOnDevice(onProgress?: OnDeviceProgress): OnDeviceAI | unde
       return out;
     },
     async ready() {
-      try { await Promise.all([getLlm(), getEmb()]); return true; }
+      try { await Promise.all([getLlm(), getEmb()]); api.loaded = true; return true; }
       catch { llm = emb = undefined; return false; }
     },
   };
+  return api;
 }

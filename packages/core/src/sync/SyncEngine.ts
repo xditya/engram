@@ -83,7 +83,9 @@ export function createSyncEngine(o: SyncOpts) {
   async function readManifest(): Promise<{ m: Manifest; etag: string | null }> {
     const got = await storage.getManifest();
     if (!got) return { m: { schemaVersion: o.schemaVersion, devices: {}, keyCheck: keyCheck(keys.hmacKey) }, etag: null };
-    const m = decodeManifest(keys.dataKey, got.bytes);
+    let m: Manifest;
+    try { m = decodeManifest(keys.dataKey, got.bytes); }
+    catch (e) { throw new Error(`key mismatch: this store belongs to a different master key (${(e as Error).message})`); }
     if (!verifyKeyCheck(keys.hmacKey, m.keyCheck)) throw new Error('key mismatch: this store belongs to a different master key');
     return { m, etag: got.etag };
   }
@@ -374,6 +376,6 @@ export function createSyncEngine(o: SyncOpts) {
   const ctx: SyncCtx = { sql, storage, keys, deviceId, now, files, log, listAll, readManifest, remoteKey };
   return {
     sync, push, pull, syncBlobs, fetchBlob, updateManifest, removeDevice, retryErrors, snapshot, bootstrapFromSnapshot, rebootstrap,
-    gc: () => runGc(ctx), writeLinkOffer, readLinkOffer: (code: string) => readLinkOffer(storage, code), deviceId,
+    gc: () => runGc(ctx), writeLinkOffer, deleteLinkOffer: (code: string) => storage.delete(linkKey(code)).catch(() => {}), readLinkOffer: (code: string) => readLinkOffer(storage, code), deviceId,
   };
 }

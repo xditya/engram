@@ -8,8 +8,9 @@ function embedQuery(): core.EmbedQuery | undefined {
   const e = engram();
   const s = getSettings().intelligence;
   if (s.mode === 'off') return undefined;
-  const provider = ai.createProvider(s, { apiKey: e.secrets.get('apiKey') ?? undefined }, { fetch, onDevice: e.platform.onDevice });
-  const embedder = ai.createEmbedder(s, provider, { onDevice: e.platform.onDevice });
+  const onDevice = e.platform.onDevice?.loaded ? e.platform.onDevice : undefined;
+  const provider = ai.createProvider(s, { apiKey: e.secrets.get('apiKey') ?? undefined }, { fetch, onDevice });
+  const embedder = ai.createEmbedder(s, provider, { onDevice });
   if (!embedder?.embed) return undefined;
   return async (text) => {
     const { vectors, model } = await embedder.embed!([text]);

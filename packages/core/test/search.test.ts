@@ -124,7 +124,7 @@ describe('vector + rrf', () => {
     const embed = async () => ({ vec: Float32Array.from([1, 0]), model: 'm1' });
     const res = await hybrid(db, 'crusty loaf type:note', embed, { now: NOW });
     expect(res.map((i) => i.id)).toEqual(['f', 'g']);
-    // single word: plain FTS only
-    expect((await hybrid(db, 'crusty', embed, { now: NOW })).map((i) => i.id)).toEqual(['f']);
+    // single word: semantic hits still append after the FTS hit
+    expect((await hybrid(db, 'crusty', embed, { now: NOW })).map((i) => i.id)).toEqual(['f', 'h', 'g']);
   });
 });
