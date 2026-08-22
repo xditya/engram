@@ -9,3 +9,4 @@ apps/mobile/ios/
 coverage/
 *.orig
 .DS_Store
+apps/mobile/modules/*/android/build/

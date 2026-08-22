@@ -10,8 +10,20 @@ React Native (Expo, expo-router) on iOS and Android; core logic is pure TypeScri
 pnpm install
 pnpm typecheck                       # all packages
 pnpm test                            # core tests (vitest on better-sqlite3, FTS5)
-cd apps/mobile && pnpm android       # or: pnpm ios (dev client, not Expo Go)
 ```
+
+## Running the app
+
+engram needs a **development build** -- Expo Go cannot run it (op-sqlite, executorch, the OCR module and share-intent are native).
+
+**Android**: Android Studio / SDK (platform 36, build-tools, an emulator or a USB-debugging device), JDK 17+, `ANDROID_HOME` set. Then:
+
+```sh
+pnpm android                         # prebuilds android/, builds the dev client, installs it, starts Metro
+pnpm start                           # later runs: just Metro, the installed dev client reconnects
+```
+
+**iOS**: a Mac with Xcode, then `pnpm ios`. No Mac: `cd apps/mobile && eas build -p ios --profile development` (see `apps/mobile/eas.json`; `preview` / `production` profiles are there too).
 
 ## Packages
 

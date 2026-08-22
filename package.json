@@ -2,6 +2,10 @@
   "name": "engram",
   "private": true,
   "scripts": {
+    "android": "pnpm --filter mobile exec expo run:android",
+    "ios": "pnpm --filter mobile exec expo run:ios",
+    "start": "pnpm --filter mobile exec expo start --dev-client",
+    "web": "pnpm --filter mobile exec expo start --web",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test"
   }
