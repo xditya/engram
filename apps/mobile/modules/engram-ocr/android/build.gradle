@@ -1,0 +1,28 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'app.engram'
+version = '0.0.0'
+
+// `-PengramFdroid=true` (or engramFdroid=true in gradle.properties) builds the F-Droid variant:
+// no ML Kit dependency, OcrEngine reports unavailable and Platform.ocr stays undefined.
+def fdroid = (findProperty('engramFdroid') ?: 'false').toString() == 'true'
+
+android {
+  namespace 'expo.modules.engramocr'
+  defaultConfig {
+    versionCode 1
+    versionName '0.0.0'
+  }
+  sourceSets {
+    main.java.srcDirs += fdroid ? 'src/fdroid/java' : 'src/play/java'
+  }
+}
+
+dependencies {
+  if (!fdroid) {
+    implementation 'com.google.mlkit:text-recognition:16.0.1'
+  }
+}

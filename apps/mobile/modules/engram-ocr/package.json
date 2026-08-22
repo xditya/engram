@@ -1,0 +1,10 @@
+{
+  "name": "engram-ocr",
+  "version": "0.0.0",
+  "private": true,
+  "description": "On-device text recognition: Apple Vision on iOS, ML Kit on Android (Play flavor only).",
+  "license": "MIT",
+  "author": "Aditya S",
+  "homepage": "https://engram.xditya.me",
+  "main": "index.ts"
+}

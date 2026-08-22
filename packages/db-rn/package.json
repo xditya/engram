@@ -11,6 +11,14 @@
   "dependencies": {
     "@engram/core": "workspace:*"
   },
+  "peerDependencies": {
+    "@op-engineering/op-sqlite": "*",
+    "expo-file-system": "*",
+    "expo-image-manipulator": "*",
+    "expo-secure-store": "*",
+    "react-native": "*",
+    "react-native-cloud-storage": "*"
+  },
   "devDependencies": {
     "typescript": "^5.8.3"
   }
