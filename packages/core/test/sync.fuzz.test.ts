@@ -3,7 +3,10 @@ import { createSharedStore, DAY, dump, makeDevice, type Device } from './fixture
 import { createMemoryAdapter, type StorageAdapter } from '../src/storage';
 
 const HOUR = 3_600_000;
-const SEEDS = process.env.SEEDS ? Array.from({ length: Number(process.env.SEEDS) }, (_, i) => i + 1) : Array.from({ length: 20 }, (_, i) => i + 1);
+// SEEDS=50 runs 1..50; SEEDS=233,296 runs exactly those.
+const SEEDS = process.env.SEEDS
+  ? process.env.SEEDS.includes(',') ? process.env.SEEDS.split(',').map(Number) : Array.from({ length: Number(process.env.SEEDS) }, (_, i) => i + 1)
+  : [...Array.from({ length: 20 }, (_, i) => i + 1), 233, 296];
 const STEPS = Number(process.env.STEPS ?? 120);
 
 function rng(seed: number) {
@@ -48,7 +51,7 @@ async function run(seed: number) {
   let k = 0;
   const sync = async (i: number) => {
     if (!online[i]) return null;
-    try { return await devs[i]!.engine.sync({ originals: 'lazy' }); }
+    try { return await devs[i]!.engine.sync({ originals: 'lazy', originalsOffline: false }); }
     catch (e) { if (!chaos.on) throw e; return null; }
   };
   const liveItems = (d: Device) => d.db.items.list({ limit: 1000 });

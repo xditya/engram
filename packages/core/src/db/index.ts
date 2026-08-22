@@ -127,6 +127,21 @@ export function createDb(
   });
   const applyRemoteOp = (op: Op): ApplyResult => tx(() => { hlc.observe(op.hlc); return applyCell(op, false); });
 
+  // An op whose parent row this replica does not have, and that its batch does not create (`creates` holds
+  // "tbl|rowId" of rows the batch creates), is either early or late; applying it would leave a shell row.
+  const isCreate = (op: Op) => (op.tbl === 'items' && op.col === 'created_by') || (op.tbl === 'spaces' && op.col === 'name');
+  const orphan = (op: Op, creates: Set<string>): boolean => {
+    const need = (tbl: 'items' | 'spaces', id: string) => !creates.has(`${tbl}|${id}`) && !db.query(`SELECT 1 FROM ${tbl} WHERE id = ?`, [id]).length;
+    const bar = op.rowId.indexOf('|');
+    switch (op.tbl) {
+      case 'items': return need('items', op.rowId);
+      case 'spaces': return need('spaces', op.rowId);
+      case 'tags': return need('items', op.rowId.slice(0, bar));
+      case 'space_items': return need('spaces', op.rowId.slice(0, bar)) || need('items', op.rowId.slice(bar + 1));
+      default: return false;
+    }
+  };
+
   const getItem = (id: string) => db.query<Item>('SELECT * FROM items WHERE id = ?', [id])[0];
   const itemPatch = (id: string, patch: Partial<Item>) => write('items', id, { ...patch, updated_at: now() });
 
@@ -184,6 +199,10 @@ export function createDb(
       return db.query<Space>('SELECT * FROM spaces WHERE id = ?', [id])[0]!;
     },
     rename: (id: string, name: string) => write('spaces', id, { name }),
+    update(id: string, patch: { name?: string; query?: string | null; sort?: number }) {
+      const cells = Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== undefined));
+      if (Object.keys(cells).length) write('spaces', id, cells);
+    },
     delete: (id: string) => write('spaces', id, { deleted_at: now() }),
     list: () => db.query<Space>('SELECT * FROM spaces WHERE deleted_at IS NULL ORDER BY sort, name'),
     addItem: (spaceId: string, itemId: string) => write('space_items', `${spaceId}|${itemId}`, { added_at: now(), deleted_at: null }),
@@ -222,15 +241,19 @@ export function createDb(
     get: (id: string) => db.query<Job>('SELECT * FROM jobs WHERE id = ?', [id])[0],
   };
 
-  // Re-run ops stored with applied = 0 (unknown column at the time); call after migrate().
+  // Re-run ops stored with applied = 0 (unknown column at the time); call after migrate(). Sync parks orphan ops the
+  // same way, so an op whose row is gone (purged) stays parked rather than coming back as a shell row.
   const reapplyDeferred = () => tx(() => {
     type Row = { seq: number; hlc: string; device_id: string; tbl: string; row_id: string; col: string; value: string; schema_version: number };
-    for (const r of db.query<Row>('SELECT * FROM ops WHERE applied = 0 ORDER BY hlc')) {
-      if (!TABLES[r.tbl]?.cols.includes(r.col)) continue;
-      db.exec('DELETE FROM ops WHERE seq = ?', [r.seq]);
-      applyCell({ hlc: r.hlc, deviceId: r.device_id, tbl: r.tbl, rowId: r.row_id, col: r.col, value: decodeValue(r.value), schemaVersion: r.schema_version }, false);
-    }
+    const rows = db.query<Row>('SELECT * FROM ops WHERE applied = 0 ORDER BY hlc');
+    const ops = rows.map((r): Op => ({ hlc: r.hlc, deviceId: r.device_id, tbl: r.tbl, rowId: r.row_id, col: r.col, value: decodeValue(r.value), schemaVersion: r.schema_version }));
+    const creates = new Set(ops.filter(isCreate).map((o) => `${o.tbl}|${o.rowId}`));
+    ops.forEach((op, i) => {
+      if (!TABLES[op.tbl]?.cols.includes(op.col) || orphan(op, creates)) return;
+      db.exec('DELETE FROM ops WHERE seq = ?', [rows[i]!.seq]);
+      applyCell(op, false);
+    });
   });
 
-  return { items, tags, spaces, files, jobs, applyRemoteOp, reapplyDeferred, hlc, transaction: tx };
+  return { items, tags, spaces, files, jobs, applyRemoteOp, reapplyDeferred, orphan, isCreate, hlc, transaction: tx };
 }

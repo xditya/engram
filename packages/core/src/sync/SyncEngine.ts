@@ -7,7 +7,7 @@ import {
   verifyKeyCheck, type KdfOpts, type Manifest,
 } from '../crypto';
 import type { Op } from './types';
-import { gc as runGc } from './gc';
+import { gc as runGc, TRASH_MS } from './gc';
 import { importInbox } from './inbox';
 
 export const STALE_MS = 180 * 86_400_000;
@@ -16,7 +16,8 @@ const MAX_BYTES = 1 << 20;
 export const TABLES = ['items', 'files', 'tags', 'spaces', 'space_items'] as const;
 
 export type Cursors = Record<string, string>; // source device id -> last consumed op file key
-export type BlobPolicy = { originals: 'eager' | 'lazy' };
+// originals: fetch originals now (wifi) or only thumbs; originalsOffline: the user wants every original on this device regardless.
+export type BlobPolicy = { originals: 'eager' | 'lazy'; originalsOffline: boolean };
 export type SyncOpts = {
   db: EngramDb;
   sql: Database;
@@ -55,6 +56,16 @@ const ROW_REVIVER = (_k: string, v: unknown) =>
 type OpRow = { seq: number; hlc: string; device_id: string; tbl: string; row_id: string; col: string; value: string; schema_version: number };
 const rowToOp = (r: OpRow): Op =>
   ({ hlc: r.hlc, deviceId: r.device_id, tbl: r.tbl, rowId: r.row_id, col: r.col, value: decodeValue(r.value), schemaVersion: r.schema_version });
+
+// Link offers are sealed under the code alone, so the joining device reads one before it has a master key.
+const linkKey = (code: string) => `link/${code}.enc`;
+export async function readLinkOffer(storage: StorageAdapter, code: string): Promise<Uint8Array | null> {
+  const sealed = await storage.get(linkKey(code));
+  if (!sealed) return null;
+  const entropy = openFromPeer(code, sealed);
+  await storage.delete(linkKey(code));
+  return entropy;
+}
 
 export function createSyncEngine(o: SyncOpts) {
   const { db, sql, storage, keys, deviceId, now, files } = o;
@@ -118,22 +129,9 @@ export function createSyncEngine(o: SyncOpts) {
     sql.exec('INSERT OR IGNORE INTO sync_errors (key, device_id, reason, first_seen) VALUES (?, ?, ?, ?)', [key, dev, String((e as Error)?.message ?? e), now()]);
   };
 
-  // An op for a row this replica does not have, and that its batch does not create, is either early (the creating
-  // device's file is not visible yet) or late (the row was purged here). Applying it would resurrect a shell row,
-  // so it waits in `ops` with applied = 0 until its parent shows up. Late ones simply stay there.
-  const exists = (tbl: string, id: string) => sql.query(`SELECT 1 FROM ${tbl} WHERE id = ?`, [id]).length > 0;
-  const orphan = (op: Op, creates: Set<string>): boolean => {
-    const need = (tbl: 'items' | 'spaces', id: string) => !creates.has(`${tbl}|${id}`) && !exists(tbl, id);
-    const bar = op.rowId.indexOf('|');
-    switch (op.tbl) {
-      case 'items': return need('items', op.rowId);
-      case 'spaces': return need('spaces', op.rowId);
-      case 'tags': return need('items', op.rowId.slice(0, bar));
-      case 'space_items': return need('spaces', op.rowId.slice(0, bar)) || need('items', op.rowId.slice(bar + 1));
-      default: return false;
-    }
-  };
-  const isCreate = (op: Op) => (op.tbl === 'items' && op.col === 'created_by') || (op.tbl === 'spaces' && op.col === 'name');
+  // Ops for rows this replica does not have (and whose batch does not create) wait in `ops` with applied = 0 until
+  // their parent shows up: early when the creating device's file is not visible yet, forever when the row was purged.
+  const { orphan, isCreate } = db;
   const applyOps = (ops: Op[]): number => {
     const creates = new Set(ops.filter(isCreate).map((o) => `${o.tbl}|${o.rowId}`));
     let n = 0;
@@ -168,6 +166,27 @@ export function createSyncEngine(o: SyncOpts) {
     await bootstrapFromSnapshot(snap, true);
     return applied + (await pullOnce()).applied;
   }
+  const readBatch = (key: string, bytes: Uint8Array): { prev: string | null; ops: Op[] } => {
+    const b = JSON.parse(text.decode(open(keys.dataKey, bytes, aad(key)))) as { prev: string | null; ops: unknown[] };
+    return { prev: b.prev, ops: decodeOps(utf8.encode(JSON.stringify(b.ops))) };
+  };
+  // Re-reads quarantined files. The cursor already moved past a bad ops file, so its ops are applied here; a bad
+  // inbox card is re-read by the next pull once its error row is gone. Files that still fail keep their row.
+  async function retryErrors(): Promise<number> {
+    let n = 0;
+    for (const r of sql.query<{ key: string }>('SELECT key FROM sync_errors')) {
+      try {
+        if (r.key.startsWith('ops/')) {
+          const bytes = await storage.get(r.key);
+          if (!bytes) continue;
+          const { ops } = readBatch(r.key, bytes);
+          db.transaction(() => { n += applyOps(ops); });
+        }
+        sql.exec('DELETE FROM sync_errors WHERE key = ?', [r.key]);
+      } catch (e) { log(`sync: ${r.key} still bad: ${String(e)}`); }
+    }
+    return n;
+  }
   async function pullOnce(): Promise<{ applied: number; gaps: { dev: string; prev: string }[] }> {
     const { m } = await readManifest();
     const devs = new Set(Object.keys(m.devices));
@@ -182,9 +201,9 @@ export function createSyncEngine(o: SyncOpts) {
         let ops: Op[] | null = null;
         let gap: string | null = null;
         try {
-          const batch = JSON.parse(text.decode(open(keys.dataKey, bytes, aad(key)))) as { prev: string | null; ops: unknown[] };
+          const batch = readBatch(key, bytes);
           if (batch.prev && batch.prev > (cur[dev] ?? '')) gap = batch.prev; // its predecessor is not listed yet
-          else ops = decodeOps(utf8.encode(JSON.stringify(batch.ops)));
+          else ops = batch.ops;
         } catch (e) { quarantine(key, dev, e); }
         if (gap) { log(`sync: gap in ops/${dev}/ before ${key} (have ${cur[dev] ?? 'nothing'})`); gaps.push({ dev, prev: gap }); break; }
         db.transaction(() => {
@@ -200,13 +219,13 @@ export function createSyncEngine(o: SyncOpts) {
   }
 
   const remoteKey = (hash: string) => { const rk = remoteKeyFor(keys.hmacKey, hash); return `blobs/${rk.slice(0, 2)}/${rk}`; };
-  async function syncBlobs(policy: BlobPolicy = { originals: 'lazy' }): Promise<void> {
+  async function syncBlobs(policy: BlobPolicy = { originals: 'lazy', originalsOffline: false }): Promise<void> {
     for (const b of sql.query<{ hash: string }>("SELECT hash FROM blob_index WHERE state = 'local'")) {
       const key = remoteKey(b.hash);
       await storage.putIfAbsent(key, sealChunks(keys.dataKey, await files.read(b.hash), aad(key)));
       sql.exec("UPDATE blob_index SET state = 'both', remote_key = ? WHERE hash = ?", [key, b.hash]);
     }
-    const roles = policy.originals === 'eager' ? "('thumb','poster','original','reader_html')" : "('thumb','poster')";
+    const roles = policy.originals === 'eager' || policy.originalsOffline ? "('thumb','poster','original','reader_html')" : "('thumb','poster')";
     const want = sql.query<{ hash: string }>(
       `SELECT DISTINCT f.hash FROM files f LEFT JOIN blob_index b ON b.hash = f.hash WHERE f.deleted_at IS NULL AND f.role IN ${roles} AND (b.hash IS NULL OR b.state = 'remote')`);
     for (const f of want) await fetchBlob(f.hash);
@@ -221,16 +240,26 @@ export function createSyncEngine(o: SyncOpts) {
     return true;
   }
 
-  async function updateManifest(): Promise<Manifest> {
+  async function editManifest(edit: (m: Manifest) => void): Promise<Manifest> {
     for (let attempt = 0; ; attempt++) {
       const { m, etag } = await readManifest();
-      m.schemaVersion = Math.max(m.schemaVersion, o.schemaVersion);
-      m.devices[deviceId] = { name: o.deviceName, lastSeen: now(), lastBatch: JSON.stringify(cursorsLocal()) };
+      edit(m);
       const r = await storage.putManifest(encodeManifest(keys.dataKey, m), etag);
       if (r !== 'conflict') return m;
       if (attempt) { log('sync: manifest conflict twice, skipping'); return m; }
     }
   }
+  const updateManifest = () => editManifest((m) => {
+    if (m.devices[deviceId]?.removed) return; // a removed device stays removed
+    m.schemaVersion = Math.max(m.schemaVersion, o.schemaVersion);
+    m.devices[deviceId] = { name: o.deviceName, lastSeen: now(), lastBatch: JSON.stringify(cursorsLocal()) };
+  });
+  // A removed device no longer holds GC back and is refused by sync(); its pushed ops stay and keep being consumed.
+  // It still has the key: removal revokes the store, not the phrase.
+  const removeDevice = async (dev: string) => {
+    await editManifest((m) => { if (m.devices[dev]) m.devices[dev].removed = true; });
+    sql.exec('INSERT INTO sync_cursor (device_id, stale) VALUES (?, 1) ON CONFLICT(device_id) DO UPDATE SET stale = 1', [dev]);
+  };
 
   // ---- snapshots -------------------------------------------------------------
   type Snapshot = { hlc: string; cursors: Cursors; tables: Record<string, unknown[]> };
@@ -294,13 +323,25 @@ export function createSyncEngine(o: SyncOpts) {
   // already be on the remote, rebuilds from the newest snapshot, catches up, then re-applies its unpushed ops on top:
   // ops for rows the rebuilt state does not have are dropped (the row was purged; they are parked as orphans and never
   // pushed), the rest are pushed as usual. The same rebuild serves a replica whose op files were pruned.
+  // The rebuilt state may still carry a tombstone that others were entitled to purge (the snapshot predates the purge
+  // and the op files replayed it): an unpushed op on a tombstone past the trash window is just as late as one on a
+  // purged row, so it is dropped too; otherwise an old restore would resurrect the row on every other device.
+  const expired = (tbl: string, rowId: string): boolean => {
+    const bar = rowId.indexOf('|');
+    const dead = (t: string, id: string) => sql.query(`SELECT 1 FROM ${t} WHERE id = ? AND deleted_at < ?`, [id, now() - TRASH_MS]).length > 0;
+    if (tbl === 'items' || tbl === 'spaces') return dead(tbl, rowId);
+    if (tbl === 'tags') return dead('items', rowId.slice(0, bar));
+    if (tbl === 'space_items') return dead('spaces', rowId.slice(0, bar)) || dead('items', rowId.slice(bar + 1));
+    return false;
+  };
   async function rebootstrap(): Promise<void> {
     await push(true);
-    const mine = sql.query<OpRow>('SELECT * FROM ops WHERE pushed != 1 ORDER BY seq');
+    const unpushed = sql.query<OpRow>('SELECT * FROM ops WHERE pushed != 1 ORDER BY seq');
     await bootstrapFromSnapshot(undefined, true);
     await pull();
     db.transaction(() => {
       sql.exec('DELETE FROM ops WHERE pushed != 1');
+      const mine = unpushed.filter((r) => !expired(r.tbl, r.row_id));
       applyOps(mine.map(rowToOp));
       if (mine.length) sql.exec(`UPDATE ops SET pushed = 0 WHERE applied = 1 AND device_id = ? AND hlc IN (${mine.map(() => '?').join(',')})`, [deviceId, ...mine.map((r) => r.hlc)]);
     });
@@ -309,16 +350,8 @@ export function createSyncEngine(o: SyncOpts) {
   }
 
   // ---- link --------------------------------------------------------------------
-  const linkKey = (code: string) => `link/${code}.enc`;
   const writeLinkOffer = async (code: string, entropy: Uint8Array, kdf?: KdfOpts) => {
     await storage.putIfAbsent(linkKey(code), sealForPeer(code, entropy, kdf));
-  };
-  const readLinkOffer = async (code: string): Promise<Uint8Array | null> => {
-    const sealed = await storage.get(linkKey(code));
-    if (!sealed) return null;
-    const entropy = openFromPeer(code, sealed);
-    await storage.delete(linkKey(code));
-    return entropy;
   };
 
   // ---- top level -----------------------------------------------------------------
@@ -328,6 +361,7 @@ export function createSyncEngine(o: SyncOpts) {
     try {
       let rebootstrapped = false;
       const me = (await readManifest()).m.devices[deviceId];
+      if (me?.removed) throw new Error('this device was removed from the store');
       if (me && isStale(me.lastSeen, now())) { await rebootstrap(); rebootstrapped = true; }
       const pushed = await push();
       const applied = await pull();
@@ -339,7 +373,7 @@ export function createSyncEngine(o: SyncOpts) {
 
   const ctx: SyncCtx = { sql, storage, keys, deviceId, now, files, log, listAll, readManifest, remoteKey };
   return {
-    sync, push, pull, syncBlobs, fetchBlob, updateManifest, snapshot, bootstrapFromSnapshot, rebootstrap,
-    gc: () => runGc(ctx), writeLinkOffer, readLinkOffer, deviceId,
+    sync, push, pull, syncBlobs, fetchBlob, updateManifest, removeDevice, retryErrors, snapshot, bootstrapFromSnapshot, rebootstrap,
+    gc: () => runGc(ctx), writeLinkOffer, readLinkOffer: (code: string) => readLinkOffer(storage, code), deviceId,
   };
 }

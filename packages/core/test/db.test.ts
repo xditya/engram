@@ -107,6 +107,25 @@ describe('items', () => {
   });
 });
 
+describe('deferred ops', () => {
+  it('reapplyDeferred skips ops whose row is gone unless the parked batch creates it', () => {
+    const { db, raw } = setup();
+    const it1 = db.items.create({ type: 'note', title: 'x' });
+    const park = (o: Op) => raw.exec('INSERT INTO ops (hlc, device_id, tbl, row_id, col, value, schema_version, pushed, applied) VALUES (?, ?, ?, ?, ?, ?, ?, 1, 0)',
+      [o.hlc, o.deviceId, o.tbl, o.rowId, o.col, JSON.stringify(o.value), o.schemaVersion]);
+    park(op({ rowId: it1.id, col: 'title', value: 'late edit' }));
+    park(op({ tbl: 'tags', rowId: `${it1.id}|t`, col: 'source', value: 'user' }));
+    raw.exec('DELETE FROM items WHERE id = ?', [it1.id]); // purged, as gc does
+    park(op({ rowId: 'fresh', col: 'created_by', value: 'dev-b' }));
+    park(op({ hlc: '9999999999999-0001-dev-b', rowId: 'fresh', col: 'title', value: 'new' }));
+    db.reapplyDeferred();
+    expect(db.items.get(it1.id)).toBeUndefined();
+    expect(raw.query('SELECT * FROM tags')).toHaveLength(0);
+    expect(db.items.get('fresh')).toMatchObject({ title: 'new', created_by: 'dev-b' });
+    expect(raw.query<{ row_id: string }>('SELECT row_id FROM ops WHERE applied = 0').map((r) => r.row_id).sort()).toEqual([it1.id, `${it1.id}|t`]);
+  });
+});
+
 describe('tags, spaces, files, fts', () => {
   it('FTS row reflects tag and title changes', () => {
     const { db, raw } = setup();
@@ -131,7 +150,7 @@ describe('tags, spaces, files, fts', () => {
   });
 
   it('spaces and files are tombstoned sets', () => {
-    const { db } = setup();
+    const { db, raw } = setup();
     const a = db.items.create({ type: 'note', title: 'a' });
     const s = db.spaces.create('Reading');
     db.spaces.addItem(s.id, a.id);
@@ -140,6 +159,9 @@ describe('tags, spaces, files, fts', () => {
     expect(db.spaces.itemsOf(s.id)).toEqual([]);
     db.spaces.rename(s.id, 'Read');
     expect(db.spaces.list()[0]!.name).toBe('Read');
+    db.spaces.update(s.id, { query: 'tag:x', sort: 5, name: undefined });
+    expect(db.spaces.list()[0]).toMatchObject({ name: 'Read', query: 'tag:x', sort: 5 });
+    expect(raw.query<{ col: string }>("SELECT col FROM ops WHERE tbl = 'spaces' AND pushed = 0").map((r) => r.col)).toContain('query');
     db.spaces.delete(s.id);
     expect(db.spaces.list()).toEqual([]);
     db.files.add({ hash: 'h1', item_id: a.id, role: 'thumb', mime: 'image/jpeg', bytes: 10, w: 1, h: 1, blurhash: null });

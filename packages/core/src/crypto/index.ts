@@ -123,7 +123,7 @@ export const openFromPeer = (code: string, sealed: Uint8Array): Uint8Array => un
 // ---- manifest ---------------------------------------------------------------
 export interface Manifest {
   schemaVersion: number;
-  devices: Record<string, { name: string; lastSeen: number; lastBatch: string | null }>;
+  devices: Record<string, { name: string; lastSeen: number; lastBatch: string | null; removed?: boolean }>;
   keyCheck: string;
 }
 

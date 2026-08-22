@@ -110,7 +110,7 @@ export default function Devices() {
               <Text size="sm" color="text2">
                 It will stop receiving changes and won't be able to open the library after its next restart. Cards it saved stay in your library.
               </Text>
-              <Text size="sm" color="text2">This revokes that device's access, not your recovery phrase. Anyone with the phrase can still open the library.</Text>
+              <Text size="sm" color="text2">This revokes that device's access to the store, not your recovery phrase. Anyone with the phrase can still open the library.</Text>
               <Button title="Remove" variant="outline" danger onPress={() => void remove()} />
               <Button title="Cancel" variant="text" onPress={close} />
             </>

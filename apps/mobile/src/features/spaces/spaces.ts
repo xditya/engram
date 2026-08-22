@@ -3,18 +3,13 @@ import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import type { Engram } from '../../lib/engram';
 
-// ponytail: core db.spaces only writes name on edit; query/sort go straight to SQL (not replicated)
-// until core grows spaces.update(id, { query?, sort? }).
 export function setSpace(e: Engram, id: string, cells: { name?: string; query?: string | null; sort?: number }) {
-  if (cells.name !== undefined) e.db.spaces.rename(id, cells.name);
-  const rest = Object.entries(cells).filter(([k, v]) => k !== 'name' && v !== undefined);
-  if (!rest.length) return;
-  e.platform.db.exec(`UPDATE spaces SET ${rest.map(([k]) => `${k} = ?`).join(', ')} WHERE id = ?`, [...rest.map(([, v]) => v), id]);
+  e.db.spaces.update(id, cells);
   e.events.emit();
 }
 
 export const reorderSpaces = (e: Engram, ids: string[]) => {
-  e.platform.db.transaction(() => ids.forEach((id, i) => e.platform.db.exec('UPDATE spaces SET sort = ? WHERE id = ?', [i + 1, id])));
+  e.db.transaction(() => ids.forEach((id, i) => e.db.spaces.update(id, { sort: i + 1 })));
   e.events.emit();
 };
 

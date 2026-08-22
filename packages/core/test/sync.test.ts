@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { createSharedStore, DAY, dump, ENTROPY, KEYS, makeDevice } from './fixtures/sync/device';
 import { createMemoryAdapter } from '../src/storage';
 import { seal } from '../src/crypto';
-import { createSyncEngine, normalizeUrl } from '../src/sync';
+import { createSyncEngine, normalizeUrl, readLinkOffer } from '../src/sync';
+import { encodeOps } from '../src/db';
 
 function world() {
   let t = 1_700_000_000_000;
@@ -50,6 +51,57 @@ describe('sync engine', () => {
     expect(errs).toEqual([{ key: bad }]);
     await w.b.engine.sync();
     expect(w.b.raw.query('SELECT * FROM sync_errors')).toHaveLength(1);
+    // retry: still bad keeps its row; once the file is good its ops land and the row goes
+    expect(await w.b.engine.retryErrors()).toBe(0);
+    expect(w.b.raw.query('SELECT * FROM sync_errors')).toHaveLength(1);
+    const good = w.a.raw.query<{ hlc: string }>('SELECT hlc FROM ops ORDER BY seq LIMIT 1')[0]!.hlc;
+    const wire = new TextDecoder().decode(encodeOps([{ hlc: good, deviceId: 'A', tbl: 'items', rowId: 'r', col: 'created_by', value: 'A', schemaVersion: 1 }, { hlc: good, deviceId: 'A', tbl: 'items', rowId: 'r', col: 'title', value: 'fixed', schemaVersion: 1 }]));
+    const ops = new TextEncoder().encode(`{"prev":null,"ops":${wire}}`);
+    await w.store.objects.set(bad, { bytes: seal(KEYS.dataKey, ops, new TextEncoder().encode(bad)), visibleAt: 0 });
+    expect(await w.b.engine.retryErrors()).toBe(2);
+    expect(w.b.db.items.get('r')?.title).toBe('fixed');
+    expect(w.b.raw.query('SELECT * FROM sync_errors')).toHaveLength(0);
+  });
+
+  it('removeDevice: the device stops holding GC back and is refused by sync', async () => {
+    const w = world();
+    const c = w.newDevice('C');
+    const it1 = w.a.db.items.create({ type: 'note', title: 'doomed' });
+    for (const d of [w.a, w.b, c]) await d.engine.sync();
+    w.tick(DAY);
+    w.a.db.items.letGo(it1.id);
+    await w.a.engine.sync();
+    w.tick(31 * DAY);
+    await w.a.engine.sync();
+    await w.b.engine.sync();
+    expect((await w.a.engine.gc()).purged).toBe(0); // C is live and behind
+    await w.a.engine.removeDevice('C');
+    expect((await w.a.engine.updateManifest()).devices.C?.removed).toBe(true);
+    expect(w.a.raw.query("SELECT stale FROM sync_cursor WHERE device_id = 'C'")).toEqual([{ stale: 1 }]);
+    expect((await w.a.engine.gc()).purged).toBeGreaterThan(0);
+    await expect(c.engine.sync()).rejects.toThrow(/removed/);
+  });
+
+  it('a stale device returning with an old restore does not resurrect a row everyone else purged', async () => {
+    const w = world();
+    const c = w.newDevice('C');
+    const it1 = w.a.db.items.create({ type: 'note', title: 'gone' });
+    for (const d of [w.a, w.b, c]) await d.engine.sync();
+    w.tick(DAY);
+    w.a.db.items.letGo(it1.id);
+    for (const d of [w.a, w.b, c]) await d.engine.sync();
+    await c.engine.snapshot(); // predates the purge: the tombstone is in it
+    w.tick(DAY);
+    c.db.items.restore(it1.id); // never pushed: C goes dark
+    w.tick(200 * DAY);
+    for (const d of [w.a, w.b]) { await d.engine.sync(); await d.engine.sync(); }
+    expect((await w.a.engine.gc()).purged).toBeGreaterThan(0);
+    await w.b.engine.gc();
+    expect((await c.engine.sync()).rebootstrapped).toBe(true);
+    expect(c.db.items.get(it1.id)?.deleted_at ?? 'purged').not.toBeNull();
+    for (const d of [w.a, w.b, c]) { await d.engine.sync(); await d.engine.gc(); }
+    for (const d of [w.a, w.b, c]) expect(d.db.items.get(it1.id)).toBeUndefined();
+    expect(dump(w.a)).toEqual(dump(c));
   });
 
   it('purges tombstones only after every live device is past them; stale devices do not block', async () => {
@@ -122,8 +174,9 @@ describe('sync engine', () => {
   it('link offer round trip', async () => {
     const w = world();
     await w.a.engine.writeLinkOffer('123456', ENTROPY, { t: 1, m: 256 });
-    expect(await w.b.engine.readLinkOffer('000000')).toBeNull();
-    expect(await w.b.engine.readLinkOffer('123456')).toEqual(ENTROPY);
+    const keyless = createMemoryAdapter(w.store, { now: w.now }); // a joining device has storage but no master key yet
+    expect(await readLinkOffer(keyless, '000000')).toBeNull();
+    expect(await readLinkOffer(keyless, '123456')).toEqual(ENTROPY);
     expect(await w.b.engine.readLinkOffer('123456')).toBeNull(); // consumed
   });
 

@@ -1,5 +1,5 @@
 import { Platform as RN } from 'react-native';
-import { crypto, type Manifest, type SyncEngine } from '@engram/core';
+import { crypto, sync as coreSync, type Manifest, type SyncEngine } from '@engram/core';
 import { wordlist } from '@scure/bip39/wordlists/english';
 import type { Engram } from '../../lib/engram';
 import type { SyncBackend } from '../../lib/settings';
@@ -41,38 +41,24 @@ export const deviceIcon = (name: string) => {
 export const unresolvedErrors = (e: Engram) =>
   e.platform.db.query<{ n: number }>('SELECT count(*) AS n FROM sync_errors WHERE resolved = 0')[0]?.n ?? 0;
 
-// ponytail: the engine only records bad files; marking them resolved and syncing again is the whole retry.
-export const retryErrors = (e: Engram) => { e.platform.db.exec('UPDATE sync_errors SET resolved = 1'); return e.sync.syncNow(); };
+export const retryErrors = async (e: Engram) => { await (await e.sync.getEngine())?.retryErrors(); return e.sync.syncNow(); };
 
 export const LINK_TTL_MS = crypto.LINK_TTL_MS;
 export const newLinkCode = () => crypto.linkOffer().code;
 
-// Reading a link offer needs a storage adapter, which the hub only builds behind a master key. A throwaway key gets
-// the engine built; the real one replaces it on success, nothing stays behind on failure.
-// ponytail: replace with a hub `sync.readLinkOffer(code)` that opens storage without a key.
+// The offer is sealed under the code alone, so it is read straight from storage: no master key needed yet.
 export async function claimLinkOffer(e: Engram, code: string): Promise<boolean> {
-  const had = await e.secrets.master.get();
-  if (!had) await e.secrets.master.set(crypto.masterKey.generate());
+  const st = await e.sync.getStorage();
+  if (!st) throw new Error('Pick a sync location first.');
+  const entropy = await coreSync.readLinkOffer(st, code);
+  if (!entropy) return false;
+  await e.secrets.master.set(entropy);
   e.sync.reset();
-  try {
-    const engine = await e.sync.getEngine();
-    const entropy = await engine?.readLinkOffer(code);
-    if (!entropy) { if (!had) await e.sync.masterKey.clear(); return false; }
-    await e.secrets.master.set(entropy);
-    e.sync.reset();
-    return true;
-  } catch (err) {
-    if (!had) await e.sync.masterKey.clear();
-    throw err;
-  }
+  return true;
 }
 
 // Devices come from the remote manifest. updateManifest also stamps this device's lastSeen, which is what a sync does anyway.
 export const readDevices = (engine: SyncEngine): Promise<Manifest> => engine.updateManifest();
 
-// ponytail: the engine has no device removal yet; surface that honestly instead of pretending.
-export async function removeDevice(engine: SyncEngine, id: string): Promise<void> {
-  const e = engine as SyncEngine & { removeDevice?: (id: string) => Promise<void> };
-  if (!e.removeDevice) throw new Error("Removing devices isn't available in this version yet.");
-  await e.removeDevice(id);
-}
+// Removal revokes that device's access to the store, not the recovery phrase.
+export const removeDevice = (engine: SyncEngine, id: string) => engine.removeDevice(id);

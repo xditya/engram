@@ -81,7 +81,8 @@ export function createSyncService(o: { platform: Platform; db: EngramDb; secrets
       if (!e) { useSyncStatus.setState({ state: 'off' }); return; }
       useSyncStatus.setState({ state: 'syncing', error: undefined });
       const onWifi = (await Network.getNetworkStateAsync().catch(() => null))?.type === Network.NetworkStateType.WIFI;
-      await e.sync({ originals: onWifi ? 'eager' : 'lazy' });
+      const originalsOffline = (await platform.keys.get('originalsOffline')) === '1';
+      await e.sync({ originals: onWifi ? 'eager' : 'lazy', originalsOffline });
       useSyncStatus.setState({ state: 'upToDate', at: platform.now(), error: undefined });
       await o.afterSync();
     } catch (err) {
@@ -98,5 +99,6 @@ export function createSyncService(o: { platform: Platform; db: EngramDb; secrets
     try { await Bg.registerTaskAsync(BG_TASK, { minimumInterval: 15 }); } catch { /* background tasks restricted on this device */ }
   }
 
-  return { getEngine, syncNow, masterKey, registerBackground, reset: () => { engine = null; }, status: useSyncStatus };
+  const getStorage = () => adapter(getSettings().sync.backend);
+  return { getEngine, getStorage, syncNow, masterKey, registerBackground, reset: () => { engine = null; }, status: useSyncStatus };
 }

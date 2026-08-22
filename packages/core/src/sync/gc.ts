@@ -13,7 +13,7 @@ export async function gc(ctx: SyncCtx): Promise<GcResult> {
   const { sql, storage, keys, deviceId, now, files } = ctx;
   const { m } = await ctx.readManifest();
   const t = now();
-  const live = Object.keys(m.devices).filter((d) => d !== deviceId && !isStale(m.devices[d]!.lastSeen, t));
+  const live = Object.keys(m.devices).filter((d) => d !== deviceId && !m.devices[d]!.removed && !isStale(m.devices[d]!.lastSeen, t));
   const cursors: Record<string, Cursors> = Object.fromEntries(live.map((d) => [d, cursorsOf(m, d)]));
   const mine: Cursors = {};
   for (const r of sql.query<{ device_id: string; last_key: string }>('SELECT device_id, last_key FROM sync_cursor WHERE last_key IS NOT NULL')) mine[r.device_id] = r.last_key;
