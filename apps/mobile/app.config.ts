@@ -65,6 +65,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     }]))],
     // Listed before expo-share-intent: later plugins' manifest mods run first, and this one must see its filters.
     './plugins/withShareOverlay',
+    './plugins/withSideloadAppGroup',
     ['expo-share-intent', {
       iosActivationRules: { NSExtensionActivationSupportsWebURLWithMaxCount: 1, NSExtensionActivationSupportsWebPageWithMaxCount: 1, NSExtensionActivationSupportsText: true, NSExtensionActivationSupportsImageWithMaxCount: 10, NSExtensionActivationSupportsMovieWithMaxCount: 1, NSExtensionActivationSupportsFileWithMaxCount: 10 },
       iosAppGroupIdentifier: APP_GROUP,

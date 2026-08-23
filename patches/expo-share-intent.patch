@@ -1,0 +1,13 @@
+--- a/ios/ExpoShareIntentModule.swift
++++ b/ios/ExpoShareIntentModule.swift
+@@ -162,6 +162,10 @@
+     }
+ 
+     private func getAppGroupIdentifier() -> String? {
++        // AltStore/SideStore rename app groups for free accounts and list the new names under ALTAppGroups.
++        if let alt = Bundle.main.object(forInfoDictionaryKey: "ALTAppGroups") as? [String], let first = alt.first {
++            return first
++        }
+         let appGroupIdentifier: String? =
+             Bundle.main.object(forInfoDictionaryKey: "AppGroupIdentifier")
+             as? String

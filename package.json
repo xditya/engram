@@ -11,5 +11,10 @@
   },
   "op-sqlite": {
     "fts5": true
+  },
+  "pnpm": {
+    "patchedDependencies": {
+      "expo-share-intent": "patches/expo-share-intent.patch"
+    }
   }
 }
