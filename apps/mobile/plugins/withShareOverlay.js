@@ -29,7 +29,12 @@ import expo.modules.ReactActivityDelegateWrapper
 // task root and handles the intent in place instead of relaunching it. Back / Done finish it, which
 // returns to the app that shared.
 class ShareActivity : ReactActivity() {
-  override fun onCreate(savedInstanceState: Bundle?) = super.onCreate(null)
+  override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(null)
+    // Opened from a notification action: action buttons ignore autoCancel, so clear it here.
+    val id = intent.getIntExtra("notificationId", 0)
+    if (id != 0) getSystemService(android.app.NotificationManager::class.java).cancel(id)
+  }
 
   override fun getMainComponentName(): String = "share"
 

@@ -1,5 +1,6 @@
 package expo.modules.engramscreenshots
 
+import android.app.ActivityManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -103,6 +104,9 @@ class ScreenshotWatchService : Service() {
       val id = c.getLong(0)
       val where = ((c.getString(1) ?: "") + "/" + (c.getString(2) ?: "")).lowercase()
       if (!where.contains("screenshot") || where.contains(".pending") || !seen.add(id)) return
+      // engram in front shows its own in-app prompt; a notification on top of it would be a duplicate.
+      val state = ActivityManager.RunningAppProcessInfo().also { ActivityManager.getMyMemoryState(it) }
+      if (state.importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND) return
       notify(id, ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id))
     }
   }
@@ -111,6 +115,7 @@ class ScreenshotWatchService : Service() {
     val share = Intent(Intent.ACTION_SEND).setClassName(packageName, "app.engram.ShareActivity").setType("image/*")
       .putExtra(Intent.EXTRA_STREAM, uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
     val code = id.toInt()
+    share.putExtra("notificationId", code)
     val save = PendingIntent.getActivity(this, code, share, FLAGS)
     val dismiss = PendingIntent.getService(this, code, Intent(this, javaClass).setAction(ACTION_DISMISS).putExtra("id", code), FLAGS)
     val b = NotificationCompat.Builder(this, CHANNEL_PROMPT)
