@@ -59,7 +59,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     // manifest mod runs after the SEND filters have moved to ShareActivity: the aliases copy MainActivity's filters, and
     // must carry the VIEW deep links (the module disables MainActivity while an alias is active) but not the share ones.
     ['@howincodes/expo-dynamic-app-icon', Object.fromEntries(ALT_ICONS.map(([name, bg]) => [name, {
-      ios: `./assets/icons/${name}.png`,
+      // All three appearances declared, else iOS 18 synthesises dark/tinted from the light image and only the glyph survives.
+      ios: { light: `./assets/icons/${name}.png`, dark: `./assets/icons/${name}.png`, tinted: './assets/icon-tinted.png' },
       android: { foregroundImage: `./assets/icons/${name}-fg.png`, backgroundColor: bg },
     }]))],
     // Listed before expo-share-intent: later plugins' manifest mods run first, and this one must see its filters.
