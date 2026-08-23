@@ -103,15 +103,12 @@ export function LibraryScreen() {
     </View>
   );
 
-  // In-flow when the content fits (nothing scrolls); overlaid on the list otherwise so showing it never moves the content.
+  // Sits above the list in the layout; once shown it never hides, so the one-time shift when it appears is fine.
   const sortBar = showSort || fits ? (
     <Animated.View
       entering={FadeInUp.duration(200)}
       exiting={FadeOutUp.duration(160)}
-      style={[
-        { flexDirection: 'row', gap: space[2], paddingHorizontal: space[4], paddingVertical: space[2], backgroundColor: c.bg },
-        fits ? null : { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 2, borderBottomWidth: 1, borderBottomColor: c.line },
-      ]}
+      style={{ flexDirection: 'row', gap: space[2], paddingHorizontal: space[4], paddingVertical: space[2], backgroundColor: c.bg }}
     >
       {SORTS.map(([k, label]) => <Chip key={k} label={label} active={sort === k} onPress={() => setSort(k)} />)}
     </Animated.View>
