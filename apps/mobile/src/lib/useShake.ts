@@ -5,8 +5,10 @@ import { Platform } from 'react-native';
 export function useShake(active: boolean, onShake: () => void) {
   useEffect(() => {
     if (!active || Platform.OS === 'web') return;
-    let Accelerometer: typeof import('expo-sensors').Accelerometer;
-    try { ({ Accelerometer } = require('expo-sensors') as typeof import('expo-sensors')); } catch { return; } // binary built without the sensor module
+    // Only the accelerometer: expo-sensors' index pulls in every sensor and throws at import when one is missing from the binary.
+    const { requireOptionalNativeModule } = require('expo-modules-core') as typeof import('expo-modules-core');
+    if (!requireOptionalNativeModule('ExponentAccelerometer')) return;
+    const Accelerometer = (require('expo-sensors/build/Accelerometer') as typeof import('expo-sensors/build/Accelerometer')).default;
     let fired = false;
     let last = 0;
     Accelerometer.setUpdateInterval(80);
