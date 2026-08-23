@@ -215,23 +215,6 @@ jobs:
         working-directory: ${{ env.APP_DIR }}
         run: npx expo prebuild --platform android --clean
 
-      - name: Probe node resolution from a library directory
-        # gesture-handler / screens locate react-native at configure time with this exact command from
-        # their own folders (hoisted monorepo). Running it here surfaces the real error if it fails.
-        run: |
-          which node && node -v
-          ls -d node_modules/react-native apps/mobile/node_modules/react-native 2>/dev/null || true
-          cd node_modules/react-native-gesture-handler/android && node --print "require.resolve('react-native/package.json')"
-
-      - name: Probe expo autolinking inline-modules mirror
-        # Expo's Gradle plugin runs this at projectsEvaluated and swallows node's stderr when it fails.
-        working-directory: ${{ env.APP_DIR }}/android
-        run: |
-          node --no-warnings --eval "require('expo/bin/autolinking')" expo-modules-autolinking mirror-kotlin-inline-modules \
-            --kotlin-files-mirror-directory "$GITHUB_WORKSPACE/node_modules/expo/android/src/main/java/inline/modules" \
-            --inline-modules-list-directory "$GITHUB_WORKSPACE/node_modules/expo/android/build/inline/modules" \
-            --watched-directories-serialized "[]"
-
       - name: Log node stderr from inside Gradle
         # Gradle's providers.exec swallows node's stderr; a shim on PATH tees it to a file.
         run: |
@@ -251,7 +234,8 @@ jobs:
         working-directory: ${{ env.APP_DIR }}/android
         run: |
           chmod +x gradlew
-          echo "org.gradle.caching=true" >> gradle.properties
+          # The template's last line has no trailing newline; appending without one corrupts its value.
+          printf '\norg.gradle.caching=true\n' >> gradle.properties
           ./gradlew assembleRelease --build-cache --stacktrace -PreactNativeArchitectures=${{ inputs.android_abis }}
           df -h /
 
