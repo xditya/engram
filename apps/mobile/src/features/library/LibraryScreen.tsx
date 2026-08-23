@@ -36,13 +36,15 @@ export function LibraryScreen() {
   const size = useRef({ content: 0, frame: 0 });
   const measure = () => setFits(size.current.frame > 0 && size.current.content <= size.current.frame);
   const lastY = useRef(0);
+  const toggledAt = useRef(0);
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const y = e.nativeEvent.contentOffset.y;
     const dy = y - lastY.current;
     lastY.current = y;
-    if (y < 40) { if (showSort) setShowSort(false); return; }
-    if (dy < -6 && !showSort) setShowSort(true);
-    else if (dy > 6 && showSort) setShowSort(false);
+    const now = Date.now();
+    if (now - toggledAt.current < 350) return; // let the bar's own animation settle before reading direction again
+    const want = y < 40 ? false : dy < -8 ? true : dy > 8 ? false : showSort;
+    if (want !== showSort) { toggledAt.current = now; setShowSort(want); }
   };
   const paste = usePasteChip();
   const nudge = useIntelligenceNudge();
@@ -89,8 +91,16 @@ export function LibraryScreen() {
     </View>
   );
 
+  // In-flow when the content fits (nothing scrolls); overlaid on the list otherwise so showing it never moves the content.
   const sortBar = showSort || fits ? (
-    <Animated.View entering={FadeInUp.duration(200)} exiting={FadeOutUp.duration(160)} style={{ flexDirection: 'row', gap: space[2], paddingHorizontal: space[4], paddingVertical: space[2], backgroundColor: c.bg }}>
+    <Animated.View
+      entering={FadeInUp.duration(200)}
+      exiting={FadeOutUp.duration(160)}
+      style={[
+        { flexDirection: 'row', gap: space[2], paddingHorizontal: space[4], paddingVertical: space[2], backgroundColor: c.bg },
+        fits ? null : { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 2, borderBottomWidth: 1, borderBottomColor: c.line },
+      ]}
+    >
       {SORTS.map(([k, label]) => <Chip key={k} label={label} active={sort === k} onPress={() => setSort(k)} />)}
     </Animated.View>
   ) : null;
@@ -135,7 +145,8 @@ export function LibraryScreen() {
         )}
       </View>
 
-      {sortBar}
+      <View style={{ flex: 1 }}>
+        {sortBar}
       <FlashList
         ref={list}
         key={`${grid ? 'g' : 'l'}${cols}`}
@@ -175,6 +186,7 @@ export function LibraryScreen() {
           );
         }}
       />
+      </View>
 
       {selected ? (
         <SelectBar ids={[...selected]} onDone={() => setSelected(null)} />
