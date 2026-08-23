@@ -2,7 +2,7 @@
   "name": "engram-screenshots",
   "version": "0.0.0",
   "private": true,
-  "description": "Android screenshot watcher: a foreground MediaStore observer that offers to save each new screenshot.",
+  "description": "Android screenshot watcher: a MediaStore content-triggered job that offers to save each new screenshot.",
   "license": "MIT",
   "author": "Aditya S",
   "homepage": "https://engram.xditya.me",

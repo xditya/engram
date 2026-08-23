@@ -14,11 +14,11 @@ class EngramScreenshotsModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("EngramScreenshots")
 
-    Function("isRunning") { ScreenshotWatchService.running }
+    Function("isRunning") { ScreenshotJob.isScheduled(context) }
 
-    Function("start") { ScreenshotWatchService.setEnabled(context, true) }
+    Function("start") { ScreenshotJob.setEnabled(context, true) }
 
-    Function("stop") { ScreenshotWatchService.setEnabled(context, false) }
+    Function("stop") { ScreenshotJob.setEnabled(context, false) }
 
     AsyncFunction("requestPermissions") { promise: Promise ->
       val perms = if (Build.VERSION.SDK_INT >= 33) arrayOf(Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.POST_NOTIFICATIONS)

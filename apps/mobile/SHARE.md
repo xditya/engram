@@ -51,21 +51,24 @@ fires while engram is in the foreground; `app/_layout.tsx` shows a "Save this sc
 asks for photo access lazily (`expo-media-library`), takes the newest photo and calls `capture.saveFiles`.
 
 **Background watcher, Android only** (`modules/engram-screenshots`, Settings → Screenshots, off by default):
-`ScreenshotWatchService` is a foreground service (`foregroundServiceType="specialUse"`, subtype
-`screenshot-watch`; `dataSync` was rejected because Android 15 caps it at 6 h/day and will not start it from
-`BOOT_COMPLETED`) that registers a `ContentObserver` on `MediaStore.Images`. On each change it queries the newest
-image from the last 10 s whose name or path contains "screenshot", dedups by id and posts a silent notification
-("Save screenshot to engram?", channel `screenshots`, low importance, thumbnail as large icon). Tapping it or its
-Save action fires `ACTION_SEND image/*` with the `content://` uri straight at `ShareActivity`, so the overlay
-behaves exactly as for a share. The persistent notification ("engram is watching for screenshots", channel
-`screenshot-watch`, min importance) has a Stop action; the setting screen re-reads `isRunning()` on focus and turns
-the toggle off if it was stopped there. `BootReceiver` restarts the service after a reboot when the
-SharedPreferences flag is on; JS mirrors the flag in `settings.capture.screenshotWatch` and starts / stops the
-service on change and at boot (`listenForScreenshots()` in `createEngram`).
+`ScreenshotJob` is a `JobService` scheduled with a content trigger on `MediaStore.Images` (update delay 500 ms,
+max 2 s), so nothing runs between screenshots and there is no foreground service or ongoing notification. Content
+triggers are one-shot: each run re-schedules the job while the SharedPreferences flag is on. On each run it queries
+the newest image from the last 15 s whose name or path contains "screenshot", dedups by id (`lastId` in the prefs),
+skips when engram is in front (the in-app prompt covers that) and posts a heads-up notification ("Save screenshot to
+engram?", channel `screenshots-v2`: high importance for the banner but silent, no vibration; priority high, category
+recommendation, thumbnail as large icon, auto-cancel, 60 s timeout). `screenshots-v2` replaced the low-importance
+`screenshots` channel because Android never raises an existing channel's importance; the old channels are deleted
+when the job is scheduled. Tapping it or its Save action fires `ACTION_SEND image/*` with the `content://` uri
+straight at `ShareActivity` (with `notificationId` so it cancels itself), so the overlay behaves exactly as for a
+share; Dismiss goes through `ScreenshotReceiver`, which also re-schedules the job after a reboot. `isRunning()`
+means "a job is pending" (`JobScheduler.getPendingJob`); the settings screen re-reads it on focus. JS mirrors the
+flag in `settings.capture.screenshotWatch` and starts / stops the job on change and at boot
+(`listenForScreenshots()` in `createEngram`).
 
 Permissions (module manifest): `READ_MEDIA_IMAGES` (33+) / `READ_EXTERNAL_STORAGE` (≤32), `POST_NOTIFICATIONS`,
-`FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SPECIAL_USE`, `RECEIVE_BOOT_COMPLETED`. `requestPermissions()` asks for
-the runtime ones through Expo's permissions manager before the toggle turns on.
+`RECEIVE_BOOT_COMPLETED`. `requestPermissions()` asks for the runtime ones through Expo's permissions manager before
+the toggle turns on.
 
 **iOS**: there is no background screenshot detection; only the in-app prompt exists, and Settings says so.
 
