@@ -8,6 +8,11 @@ export function setSpace(e: Engram, id: string, cells: { name?: string; query?: 
   e.events.emit();
 }
 
+export function deleteSpace(e: Engram, id: string) {
+  e.db.spaces.delete(id);
+  e.events.emit();
+}
+
 export const reorderSpaces = (e: Engram, ids: string[]) => {
   e.db.transaction(() => ids.forEach((id, i) => e.db.spaces.update(id, { sort: i + 1 })));
   e.events.emit();

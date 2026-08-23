@@ -3,7 +3,7 @@ import { Pressable, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ItemGrid, toEntry } from '../../src/features/spaces/ItemGrid';
 import { SpaceSheet } from '../../src/features/spaces/SpaceSheet';
-import { exportSpace, setSpace, spaceItems } from '../../src/features/spaces/spaces';
+import { deleteSpace, exportSpace, setSpace, spaceItems } from '../../src/features/spaces/spaces';
 import { Icon } from '../../src/icons/Icon';
 import { engram, useLiveQuery, useSettings, useToast } from '../../src/lib/engram';
 import { useTheme } from '../../src/theme/useTheme';
@@ -66,6 +66,7 @@ export default function SpaceScreen() {
         initial={data ? { name: data.space.name, query: data.space.query } : undefined}
         onSave={(name, query) => { setSpace(engram(), id!, { name, query: query || null }); setEditing(false); }}
         onClose={() => setEditing(false)}
+        onDelete={() => { setEditing(false); deleteSpace(engram(), id!); router.back(); }}
       />
     </Screen>
   );
