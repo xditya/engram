@@ -16,6 +16,7 @@ import { ShareSheet, useSavedToast } from '../src/features/capture';
 import { listenForScreenshots, saveLatestScreenshot, useScreenshotPrompt } from '../src/lib/screenshots';
 import { useShake } from '../src/lib/useShake';
 import { useShareLog } from '../src/lib/shareLog';
+import { takeSharedPasteboard } from '../modules/engram-diag';
 import * as Haptics from 'expo-haptics';
 import { Text } from '../src/ui';
 import '../src/features/settings/appearance';
@@ -45,6 +46,7 @@ function useCaptureIntents() {
 
   useEffect(() => {
     if (!engram || !hasShareIntent) return;
+    if (intent) { resetShareIntent(); return; } // already handled from the link payload
     log('share', JSON.stringify({ webUrl: shareIntent.webUrl, text: shareIntent.text?.slice(0, 120), files: shareIntent.files?.map((f) => f.path) }));
     resetShareIntent();
     setIntent(shareIntent);
@@ -52,6 +54,24 @@ function useCaptureIntents() {
 
   useEffect(() => {
     if (!engram || !url) return;
+    // Share extension hand-off without a usable App Group: the payload rides in the link (&p=), or media
+    // sits on the same-team pasteboard (p=pasteboard). When the group works, useShareIntent handles it instead.
+    const p = /[?&]p=([A-Za-z0-9_-]+)/.exec(url)?.[1];
+    if (p && /dataUrl=/.test(url)) {
+      try {
+        if (p === 'pasteboard') {
+          const files = takeSharedPasteboard();
+          log('share', `pasteboard: ${files.length} file(s)`);
+          if (files.length) setIntent({ files: files.map((f) => ({ path: f })) });
+        } else {
+          const bin = atob(p.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - (p.length % 4)) % 4));
+          const json = JSON.parse(decodeURIComponent(Array.from(bin, (ch) => '%' + ch.charCodeAt(0).toString(16).padStart(2, '0')).join(''))) as { webUrl?: string; text?: string };
+          log('share', `link payload: ${JSON.stringify(json).slice(0, 160)}`);
+          if (json.webUrl || json.text) setIntent({ webUrl: json.webUrl ?? null, text: json.text ?? null });
+        }
+      } catch (e) { log('error', `payload: ${(e as Error).message}`); }
+      return;
+    }
     const { hostname, path, queryParams } = Linking.parse(url);
     // engram://save?url=… parses as hostname 'save'; https://engram.xditya.me/save?url=… as path '/save'.
     if ((path?.replace(/^\//, '') || hostname) !== 'save') return;
