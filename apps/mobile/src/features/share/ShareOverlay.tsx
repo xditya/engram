@@ -78,7 +78,7 @@ export function ShareOverlay({ intent, error, finish }: { intent: ShareIntentLik
       pillScale.value = withDelay(800, withSpring(1, { damping: 14, stiffness: 220, mass: 1, reduceMotion: NEVER }), NEVER);
     }
     at(800, () => { void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); AccessibilityInfo.announceForAccessibility('Saved to engram'); });
-    at(2400, () => { pillOp.value = tm(0, 200); pillY.value = tm(-8, 200); });
+    at(2400, () => { pillOp.value = tm(0, 200); if (!reduced) pillY.value = tm(-8, 200); });
     return () => timers.current.forEach(clearTimeout);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
