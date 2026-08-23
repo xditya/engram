@@ -4,5 +4,6 @@ export function redirectSystemPath({ path }: { path: string; initial: boolean })
   const code = /[?&]code=(\d{6})/.exec(path)?.[1];
   if (code) return `/sync/link?code=${code}`;
   if (/(^|\/)save(\?|$)/.test(path)) return '/';
+  if (/dataUrl=/.test(path)) return '/'; // expo-share-intent's hand-off; the root layout reads the payload itself
   return path;
 }

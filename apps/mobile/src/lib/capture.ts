@@ -52,8 +52,12 @@ export function createCapture(ctx: Pick<JobCtx, 'platform' | 'db'> & { queue: Qu
     // Local file uris (image picker, document picker, share sheet). One item per file; bytes copied into the FileStore.
     async saveFiles(uris: string[], o: Pick<CaptureOpts, 'tags'> = {}): Promise<Item[]> {
       const out: Item[] = [];
-      for (const uri of uris) {
-        const f = new File(uri);
+      const errors: string[] = [];
+      for (const raw of uris) {
+        // iOS share payloads arrive as bare container paths; the File API wants a file:// URI.
+        const uri = /^[a-z][a-z0-9+.-]*:/i.test(raw) ? raw : `file://${raw}`;
+        let f: File;
+        try { f = new File(uri); if (!f.exists) throw new Error('missing'); } catch { errors.push(raw.split('/').pop() ?? raw); continue; }
         const mime = (f.type && f.type !== 'application/octet-stream' ? f.type : media.mimeFromExtension(f.name)) ?? 'application/octet-stream';
         const type: ItemType = mime.startsWith('image/') ? 'image' : mime.startsWith('video/') ? 'video' : mime === 'application/pdf' ? 'pdf' : 'file';
         const item = db.items.create({ type, title: f.name, meta: JSON.stringify({ filename: f.name }) });
@@ -61,6 +65,7 @@ export function createCapture(ctx: Pick<JobCtx, 'platform' | 'db'> & { queue: Qu
         const kinds: JobKind[] = type === 'image' ? ['thumb', 'ocr', 'autotag', 'classify', 'embed'] : type === 'video' ? ['thumb', 'autotag', 'classify', 'embed'] : ['autotag', 'classify', 'embed'];
         out.push(finish(item, kinds, o.tags));
       }
+      if (!out.length && errors.length) throw new Error(`Couldn't read ${errors.length === 1 ? errors[0] : `${errors.length} files`}`);
       return out;
     },
     // What the share sheet / share intent hands us. Returns what was saved (possibly several files).
