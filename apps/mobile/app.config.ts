@@ -2,6 +2,7 @@ import type { ConfigContext, ExpoConfig } from 'expo/config';
 
 const APP_GROUP = 'group.app.engram';
 const DOMAIN = 'engram.xditya.me';
+const ALT_ICONS: [string, string][] = [['paper', '#F4F5F7'], ['indigo', '#2E4FD6'], ['ink', '#000000']];
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -54,12 +55,20 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ['expo-image-picker', { photosPermission: 'Save photos from your library into engram.' }],
     ['expo-media-library', { photosPermission: 'Save photos from your library into engram.', savePhotosPermission: 'Export images from engram to your library.' }],
     ['react-native-cloud-storage', { iCloudContainerEnvironment: 'Production' }],
+    // Alternate launcher icons. graphite is the default (MainActivity / AppIcon). Listed before withShareOverlay so its
+    // manifest mod runs after the SEND filters have moved to ShareActivity: the aliases copy MainActivity's filters, and
+    // must carry the VIEW deep links (the module disables MainActivity while an alias is active) but not the share ones.
+    ['@howincodes/expo-dynamic-app-icon', Object.fromEntries(ALT_ICONS.map(([name, bg]) => [name, {
+      ios: `./assets/icons/${name}.png`,
+      android: { foregroundImage: `./assets/icons/${name}-fg.png`, backgroundColor: bg },
+    }]))],
     // Listed before expo-share-intent: later plugins' manifest mods run first, and this one must see its filters.
     './plugins/withShareOverlay',
     ['expo-share-intent', {
       iosActivationRules: { NSExtensionActivationSupportsWebURLWithMaxCount: 1, NSExtensionActivationSupportsWebPageWithMaxCount: 1, NSExtensionActivationSupportsText: true, NSExtensionActivationSupportsImageWithMaxCount: 10, NSExtensionActivationSupportsMovieWithMaxCount: 1, NSExtensionActivationSupportsFileWithMaxCount: 10 },
       iosAppGroupIdentifier: APP_GROUP,
-      iosShareExtensionName: 'engram',
+      // Also names the Xcode target (non-alphanumerics stripped); it must differ from the app target 'engram' or the plugin skips creating it.
+      iosShareExtensionName: 'Save to engram',
       androidIntentFilters: ['text/*', 'image/*', 'video/*', '*/*'],
       androidMultiIntentFilters: ['image/*'],
     }],
