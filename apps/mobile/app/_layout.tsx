@@ -59,13 +59,15 @@ function useCaptureIntents() {
     const p = /[?&]p=([A-Za-z0-9_-]+)/.exec(url)?.[1];
     if (p && /dataUrl=/.test(url)) {
       try {
-        if (p === 'pasteboard') {
+        const bin = atob(p.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - (p.length % 4)) % 4));
+        const text = decodeURIComponent(Array.from(bin, (ch) => '%' + ch.charCodeAt(0).toString(16).padStart(2, '0')).join(''));
+        if (text === 'pasteboard') {
           const files = takeSharedPasteboard();
           log('share', `pasteboard: ${files.length} file(s)`);
           if (files.length) setIntent({ files: files.map((f) => ({ path: f })) });
+          else log('error', 'pasteboard: nothing to take');
         } else {
-          const bin = atob(p.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - (p.length % 4)) % 4));
-          const json = JSON.parse(decodeURIComponent(Array.from(bin, (ch) => '%' + ch.charCodeAt(0).toString(16).padStart(2, '0')).join(''))) as { webUrl?: string; text?: string };
+          const json = JSON.parse(text) as { webUrl?: string; text?: string };
           log('share', `link payload: ${JSON.stringify(json).slice(0, 160)}`);
           if (json.webUrl || json.text) setIntent({ webUrl: json.webUrl ?? null, text: json.text ?? null });
         }
