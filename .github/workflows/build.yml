@@ -223,6 +223,15 @@ jobs:
           ls -d node_modules/react-native apps/mobile/node_modules/react-native 2>/dev/null || true
           cd node_modules/react-native-gesture-handler/android && node --print "require.resolve('react-native/package.json')"
 
+      - name: Probe expo autolinking inline-modules mirror
+        # Expo's Gradle plugin runs this at projectsEvaluated and swallows node's stderr when it fails.
+        working-directory: ${{ env.APP_DIR }}/android
+        run: |
+          node --no-warnings --eval "require('expo/bin/autolinking')" expo-modules-autolinking mirror-kotlin-inline-modules \
+            --kotlin-files-mirror-directory "$GITHUB_WORKSPACE/node_modules/expo/android/src/main/java/inline/modules" \
+            --inline-modules-list-directory "$GITHUB_WORKSPACE/node_modules/expo/android/build/inline/modules" \
+            --watched-directories-serialized "[]"
+
       - name: Build Release APK
         # The Expo template signs the release build with the debug keystore, so
         # this needs no secrets. The APK is sideload-ready, not Play-Store-ready.
