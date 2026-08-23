@@ -232,6 +232,19 @@ jobs:
             --inline-modules-list-directory "$GITHUB_WORKSPACE/node_modules/expo/android/build/inline/modules" \
             --watched-directories-serialized "[]"
 
+      - name: Log node stderr from inside Gradle
+        # Gradle's providers.exec swallows node's stderr; a shim on PATH tees it to a file.
+        run: |
+          mkdir -p /tmp/nodeshim
+          REAL_NODE=$(which node)
+          cat > /tmp/nodeshim/node <<EOF
+          #!/usr/bin/env bash
+          echo "--- node \$* (cwd \$PWD)" >> /tmp/node-stderr.log
+          exec "$REAL_NODE" "\$@" 2> >(tee -a /tmp/node-stderr.log >&2)
+          EOF
+          chmod +x /tmp/nodeshim/node
+          echo "/tmp/nodeshim" >> "$GITHUB_PATH"
+
       - name: Build Release APK
         # The Expo template signs the release build with the debug keystore, so
         # this needs no secrets. The APK is sideload-ready, not Play-Store-ready.
@@ -241,6 +254,10 @@ jobs:
           echo "org.gradle.caching=true" >> gradle.properties
           ./gradlew assembleRelease --build-cache --stacktrace -PreactNativeArchitectures=${{ inputs.android_abis }}
           df -h /
+
+      - name: Show node stderr captured during Gradle
+        if: failure()
+        run: cat /tmp/node-stderr.log 2>/dev/null || echo "(no node stderr captured)"
 
       - name: Collect APK
         run: cp ${{ env.APP_DIR }}/android/app/build/outputs/apk/release/app-release.apk engram-android.apk
