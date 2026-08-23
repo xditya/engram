@@ -2,11 +2,12 @@ import { create } from 'zustand';
 import { File, Paths } from 'expo-file-system';
 import type { IntelligenceSettings } from '@engram/core';
 
+export type AppIcon = 'graphite' | 'paper' | 'indigo' | 'ink';
 export type SyncBackend = 'off' | 'gdrive' | 'icloud' | 'webdav';
 export interface Settings {
   intelligence: IntelligenceSettings;
   sync: { backend: SyncBackend; webdav?: { baseUrl: string; username: string }; deviceName: string };
-  ui: { view: 'grid' | 'list'; density: 'comfortable' | 'cozy' | 'compact'; sort: 'saved' | 'modified' | 'opened' | 'title'; traceIndicator: boolean };
+  ui: { view: 'grid' | 'list'; density: 'comfortable' | 'cozy' | 'compact'; sort: 'saved' | 'modified' | 'opened' | 'title'; traceIndicator: boolean; appIcon: AppIcon };
   advanced: { googleClientId?: string };
   capture: { screenshotWatch: boolean }; // Android: the background screenshot watcher
   spend: { month: string; usd: number }; // AI spend, reset when the month changes
@@ -16,7 +17,7 @@ export interface Settings {
 export const DEFAULTS: Settings = {
   intelligence: { mode: 'off', summaries: true, describeImages: false },
   sync: { backend: 'off', deviceName: 'Phone' },
-  ui: { view: 'grid', density: 'cozy', sort: 'saved', traceIndicator: true },
+  ui: { view: 'grid', density: 'cozy', sort: 'saved', traceIndicator: true, appIcon: 'graphite' },
   advanced: {},
   capture: { screenshotWatch: false },
   spend: { month: '', usd: 0 },
