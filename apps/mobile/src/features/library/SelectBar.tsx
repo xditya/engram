@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { engram, useLiveQuery, useToast } from '../../lib/engram';
@@ -27,9 +27,13 @@ export function SelectBar({ ids, onDone }: { ids: string[]; onDone: () => void }
     engram().db.transaction(() => { for (const id of ids) engram().db.spaces.addItem(spaceId, id); });
     setMode(null); show(`Added ${n}`); onDone();
   };
+  const [confirm, setConfirm] = useState(false);
+  useEffect(() => { if (!confirm) return; const t = setTimeout(() => setConfirm(false), 4000); return () => clearTimeout(t); }, [confirm]);
+  useEffect(() => setConfirm(false), [ids.length]);
   const letGo = () => {
+    if (!confirm) return setConfirm(true); // second tap within 4 s confirms
     engram().db.transaction(() => { for (const id of ids) engram().db.items.letGo(id); });
-    show(`Let go ${n}`); onDone();
+    show(`Let go ${n} · 30 days to recover`); onDone();
   };
 
   const action = (label: string, onPress: () => void, danger?: boolean) => (
@@ -44,7 +48,7 @@ export function SelectBar({ ids, onDone }: { ids: string[]; onDone: () => void }
         <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: space[2] }}>
           {action('Tag', () => setMode('tag'))}
           {action('Add to Space', () => setMode('space'))}
-          {action('Let go', letGo, true)}
+          {action(confirm ? `Tap again to let go ${n}` : 'Let go', letGo, true)}
         </View>
       </View>
       <Sheet open={mode === 'tag'} onClose={() => setMode(null)}>
