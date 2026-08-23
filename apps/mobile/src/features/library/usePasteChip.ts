@@ -10,7 +10,7 @@ export function usePasteChip() {
     let seen: string | null = null;
     const check = async () => {
       try {
-        if (!(await Clipboard.hasUrlAsync())) return;
+        if (!(await Clipboard.hasStringAsync())) return;
         const s = (await Clipboard.getStringAsync()).trim();
         if (s === seen || !/^https?:\/\/\S+$/i.test(s)) return;
         seen = s;

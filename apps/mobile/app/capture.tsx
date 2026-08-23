@@ -34,7 +34,9 @@ export default function CaptureSheet() {
 
   const paste = () => run(async () => {
     const { capture } = engram();
-    if (await Clipboard.hasUrlAsync()) { const u = await Clipboard.getUrlAsync(); if (u) return done(await capture.saveUrl(u)); }
+    // hasUrlAsync/getUrlAsync are iOS-only; a URL is just a string that looks like one.
+    const s = (await Clipboard.hasStringAsync()) ? (await Clipboard.getStringAsync()).trim() : '';
+    if (/^https?:\/\/\S+$/i.test(s)) return done(await capture.saveUrl(s));
     if (await Clipboard.hasImageAsync()) {
       const img = await Clipboard.getImageAsync({ format: 'png' });
       if (img) {
@@ -76,7 +78,7 @@ export default function CaptureSheet() {
 
   const tiles: { icon: IconName; label: string; hint: string; onPress: () => void }[] = [
     { icon: 'type-note', label: 'Note', hint: 'Start typing', onPress: () => router.replace('/note/new' as never) },
-    { icon: 'type-link', label: 'Paste', hint: 'Link on clipboard', onPress: paste },
+    { icon: 'type-link', label: 'Paste', hint: 'From clipboard', onPress: paste },
     { icon: 'type-image', label: 'Photo / File', hint: 'From your library', onPress: photoOrFile },
     { icon: 'type-article', label: 'Camera', hint: 'Scan to text', onPress: camera },
   ];
