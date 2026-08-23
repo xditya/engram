@@ -41,7 +41,8 @@ export const readability: Enricher = {
     try { art = new Readability(parseHtml(html) as unknown as Document).parse(); } catch { return {}; }
     const text = cleanText(art?.textContent);
     if (!art || !text || text.length < 200) return {};
-    const out: Out = { body: text };
+    // Enough readable prose makes the page an article; og:type and site enrichers merge later and still override.
+    const out: Out = { body: text, type: 'article' };
     if (art.title) out.title = cleanText(art.title);
     if (art.content) out.files = [{ role: 'reader_html', bytes: new TextEncoder().encode(art.content), mime: 'text/html' }];
     return out;

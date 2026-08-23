@@ -1,9 +1,7 @@
 import { Pressable, ScrollView, View } from 'react-native';
 import { Image } from 'expo-image';
-import { Icon } from '../../icons/Icon';
 import { useTheme } from '../../theme/useTheme';
 import { Text } from '../../ui';
-import { typeIcon } from './format';
 import type { Entry } from './useLibrary';
 
 // Up to five pinned cards, 132x96, hidden when empty.
@@ -11,7 +9,7 @@ export function PinnedStrip({ pinned, onPress }: { pinned: Entry[]; onPress: (id
   const { c, radius, space } = useTheme();
   if (!pinned.length) return null;
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: space[4], gap: space[2], paddingBottom: space[3] }}>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: space[1], gap: space[2], paddingBottom: 10 }}>
       {pinned.map(({ item, uri }) => (
         <Pressable
           key={item.id}
@@ -23,9 +21,9 @@ export function PinnedStrip({ pinned, onPress }: { pinned: Entry[]; onPress: (id
           {uri ? (
             <Image source={{ uri }} style={{ width: 132, height: 96 }} contentFit="cover" accessibilityIgnoresInvertColors />
           ) : (
-            <View style={{ flex: 1, padding: space[3], justifyContent: 'space-between' }}>
-              <Icon name={typeIcon(item.type)} size={16} color={c.text3} />
-              <Text size="xs" weight={500} numberOfLines={2} style={{ fontSize: 13 }}>{item.title ?? item.body ?? item.url ?? 'Untitled'}</Text>
+            <View style={{ flex: 1, padding: 10, justifyContent: 'space-between' }}>
+              <Text size="xs" weight={500} numberOfLines={3} style={{ fontSize: 13, lineHeight: 16 }}>{item.title ?? item.body ?? item.url ?? 'Untitled'}</Text>
+              <Text size="xs" mono color="text3" style={{ fontSize: 11 }}>{item.type}</Text>
             </View>
           )}
         </Pressable>

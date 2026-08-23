@@ -55,7 +55,6 @@ export default function FirstSave() {
         onChangeText={setText}
         placeholder="https://… or a note"
         multiline
-        autoFocus
         style={{ minHeight: 96, textAlignVertical: 'top', marginTop: space[2] }}
       />
     </Step>

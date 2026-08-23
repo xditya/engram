@@ -26,8 +26,8 @@ function TagChip({ label, onPress, dashed, accessibilityLabel, delay = 0 }: { la
     .withInitialValues((reduced ? { opacity: 0 } : { opacity: 0, transform: [{ translateY: 4 }] }) as { opacity: number }); // the builder's type omits transform; the runtime merges any style
   return (
     <APressable entering={entering} accessibilityRole="button" accessibilityLabel={accessibilityLabel} onPress={onPress} hitSlop={6}
-      style={{ height: 32, paddingHorizontal: 12, borderRadius: 7, justifyContent: 'center', borderWidth: 1, borderColor: c.line, borderStyle: dashed ? 'dashed' : 'solid' }}>
-      <Text size="xs" color={dashed ? 'text2' : 'text'}>{label}</Text>
+      style={{ paddingVertical: 4, paddingHorizontal: 9, borderRadius: 7, justifyContent: 'center', borderWidth: 1, borderColor: c.line, borderStyle: dashed ? 'dashed' : 'solid' }}>
+      <Text size="xs">{label}</Text>
     </APressable>
   );
 }
@@ -45,8 +45,9 @@ export function Tags({ item, tags, pending, compact }: { item: Item; tags: strin
   const add = (t: string) => { const v = t.trim(); if (v) engram().db.tags.add(item.id, v); setDraft(null); };
   return (
     <View style={{ paddingVertical: compact ? 0 : space[3], gap: space[2] }}>
+      {/* ponytail: compact (share sheet) clips to one chip row to keep the sheet short; a horizontal scroll or +N overflow is the upgrade */}
       <View accessibilityLiveRegion="polite" accessibilityLabel={tags.length ? `${tags.length} ${tags.length === 1 ? 'tag' : 'tags'}: ${tags.join(', ')}` : undefined}
-        style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space[2], alignItems: 'center' }}>
+        style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, alignItems: 'center', maxHeight: compact ? 30 : undefined, overflow: 'hidden' }}>
         {tags.map((t) => <TagChip key={t} label={t} delay={Math.max(0, fresh.indexOf(t)) * 120} accessibilityLabel={`Remove tag ${t}`} onPress={() => engram().db.tags.remove(item.id, t)} />)}
         {pending && !tags.length ? <Animated.View exiting={FadeOut.duration(120)}><Text size="xs" mono color="text3">tagging…</Text></Animated.View> : null}
         {draft === null ? (
@@ -62,7 +63,7 @@ export function Tags({ item, tags, pending, compact }: { item: Item; tags: strin
             placeholderTextColor={c.text3}
             autoCapitalize="none"
             accessibilityLabel="New tag"
-            style={{ height: 32, minWidth: 96, paddingHorizontal: 12, borderRadius: 7, borderWidth: 1, borderColor: c.accent, color: c.text, fontFamily: 'Geist', fontSize: 12 }}
+            style={{ paddingVertical: 4, minWidth: 96, paddingHorizontal: 9, borderRadius: 7, borderWidth: 1, borderColor: c.accent, color: c.text, fontFamily: 'Geist', fontSize: 12 }}
           />
         )}
       </View>
@@ -155,7 +156,7 @@ export function MetaBar({ item, onDismiss }: { item: Item; onDismiss: () => void
   }
 
   return (
-    <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, maxHeight: '70%', backgroundColor: c.surface, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet }}>
+    <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, maxHeight: '70%', backgroundColor: c.surface, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, borderTopWidth: 1, borderTopColor: c.line }}>
       <Pressable accessibilityRole="button" accessibilityLabel="Hide details" onPress={() => setOpen(false)} style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', paddingHorizontal: space[4], paddingTop: space[2] }}>
         <Text size="xs" mono color="text2" numberOfLines={1} style={{ flex: 1 }}>{line}</Text>
         <Text size="sm" color="text3">⌄</Text>
@@ -178,7 +179,7 @@ export function MetaBar({ item, onDismiss }: { item: Item; onDismiss: () => void
         {item.url ? (
           <>
             <RowLine onPress={() => openOriginal(item.url)} label="Open original">
-              <Text size="xs" mono color="accent" numberOfLines={2}>{item.url}</Text>
+              <Text size="xs" mono color="accent" numberOfLines={2}>{item.url.replace(/^https?:\/\/(www\.)?/, '')}</Text>
             </RowLine>
             <Hairline />
           </>
@@ -186,15 +187,15 @@ export function MetaBar({ item, onDismiss }: { item: Item; onDismiss: () => void
         <RowLine>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[2] }}>
             <Trace size={12} opacity={Math.max(0.25, trace.strength)} />
-            <Text size="sm" color="text2">{trace.text}</Text>
+            <Text size="sm">{trace.text}</Text>
           </View>
         </RowLine>
         <SpaceChips itemId={item.id} before={<Hairline />} />
         <Hairline />
         <View style={{ flexDirection: 'row', gap: space[2], paddingTop: space[4] }}>
-          <Button title={pinned ? 'Unpin' : pinFull ? `${MAX_PINNED} pinned` : 'Pin'} variant="outline" disabled={pinFull} onPress={togglePin} style={{ flex: 1 }} />
-          <Button title="Share" variant="outline" onPress={() => void shareItem(item).catch((e: Error) => show(e.message))} style={{ flex: 1 }} />
-          <Button title={confirmLetGo ? 'Tap again to let go' : 'Let go'} variant="outline" danger onPress={letGo} style={{ flex: confirmLetGo ? 2 : 1 }} />
+          <Button title={pinned ? 'Unpin' : pinFull ? `${MAX_PINNED} pinned` : 'Pin'} variant="outline" height={44} disabled={pinFull} onPress={togglePin} style={{ flex: 1 }} />
+          <Button title="Share" variant="outline" height={44} onPress={() => void shareItem(item).catch((e: Error) => show(e.message))} style={{ flex: 1 }} />
+          <Button title={confirmLetGo ? 'Tap again to let go' : 'Let go'} variant="outline" height={44} danger onPress={letGo} style={{ flex: confirmLetGo ? 2 : 1 }} />
         </View>
       </ScrollView>
     </View>

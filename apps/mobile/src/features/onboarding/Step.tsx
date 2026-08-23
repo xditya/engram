@@ -37,10 +37,10 @@ export function Step({ n, children, footer }: { n: number; children: ReactNode; 
 }
 
 // Radio-style chooser card. `selected` draws the accent ring and reveals the card's own controls.
-export function Card({ title, body, selected, onPress, children, disabled }: {
-  title: string; body: string; selected?: boolean; onPress?: () => void; children?: ReactNode; disabled?: boolean;
+export function Card({ title, body, selected, onPress, children, disabled, badge }: {
+  title: string; body: string; selected?: boolean; onPress?: () => void; children?: ReactNode; disabled?: boolean; badge?: string;
 }) {
-  const { c, space, radius } = useTheme();
+  const { c, space } = useTheme();
   return (
     <Pressable
       accessibilityRole="radio"
@@ -48,11 +48,13 @@ export function Card({ title, body, selected, onPress, children, disabled }: {
       disabled={disabled}
       onPress={onPress}
       style={{
-        backgroundColor: c.surface, borderRadius: radius.lg, padding: space[4], gap: space[2],
-        borderWidth: 1, borderColor: selected ? c.accent : c.line, opacity: disabled ? 0.5 : 1,
+        backgroundColor: selected ? c.accentSoft : c.surface, borderRadius: 14, padding: space[4], gap: space[2], opacity: disabled ? 0.5 : 1,
       }}
     >
-      <Text weight={500}>{title}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[2] }}>
+        <Text weight={500} style={{ flex: 1 }}>{title}</Text>
+        {badge ? <Text size="xs" mono color="text3">{badge}</Text> : null}
+      </View>
       <Text size="sm" color="text2">{body}</Text>
       {selected ? children : null}
     </Pressable>

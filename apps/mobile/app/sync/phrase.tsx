@@ -55,33 +55,33 @@ export default function Phrase() {
   return (
     <Screen>
       <Header />
-      <ScrollView contentContainerStyle={{ paddingHorizontal: space[4], paddingBottom: space[6], gap: space[4] }}>
-        <Text weight={600} style={{ fontSize: 26, lineHeight: 32 }}>Your recovery phrase</Text>
-        <Text size="sm" color="text2">This is the only way into your library on a new device if this one is lost.</Text>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: space[6] }}>
+        <Text weight={600} style={{ fontSize: 26, lineHeight: 32, marginTop: 18 }}>Your recovery phrase</Text>
+        <Text color="text2" style={{ fontSize: 15, lineHeight: 22, marginTop: 10, marginBottom: 22 }}>This is the only way into your library on a new device if this one is lost.</Text>
 
         <View
           accessible
           accessibilityLabel={words.map((w, i) => `${i + 1} ${w}`).join(', ')}
-          style={{ backgroundColor: c.surface2, borderRadius: 14, paddingVertical: space[4], paddingHorizontal: space[3], flexDirection: 'row', flexWrap: 'wrap' }}
+          style={{ backgroundColor: c.surface2, borderRadius: 14, paddingVertical: 22, paddingHorizontal: 20, flexDirection: 'row', flexWrap: 'wrap', rowGap: 18, columnGap: 0 }}
         >
           {words.map((w, i) => (
-            <View key={i} style={{ width: `${100 / perRow}%`, paddingVertical: space[2], paddingHorizontal: space[1] }}>
+            <View key={i} style={{ width: `${100 / perRow}%`, paddingHorizontal: 5 }}>
               <Text mono color="text3" style={{ fontSize: 10, lineHeight: 14 }}>{i + 1}</Text>
               <Text mono selectable style={{ fontSize: 14 }}>{w}</Text>
             </View>
           ))}
         </View>
-        <Text color="text2" style={{ fontSize: 13, lineHeight: 19 }}>Anyone with these words can read your library. engram never sees them.</Text>
+        <Text color="text2" style={{ fontSize: 13, lineHeight: 19, marginTop: 14 }}>Anyone with these words can read your library. engram never sees them.</Text>
 
-        <View style={{ gap: space[3], marginTop: space[2] }}>
+        <View style={{ gap: space[3], marginTop: 22 }}>
           {saved ? (
             <Text size="sm" color="text2" style={{ textAlign: 'center', paddingVertical: space[3] }}>
               Saved to {saved.where} · <Text size="sm" mono color="text3">{hhmm(saved.at)}</Text>
             </Text>
-          ) : <Button title="Save to password manager" onPress={() => void save()} />}
+          ) : <Button title="Save to password manager" height={52} onPress={() => void save()} />}
           {saveError ? <Text size="sm" color="text2">{saveError}</Text> : null}
-          <Button title="Copy" variant="outline" onPress={() => void copy()} />
-          {saved?.where === 'your note' ? null : <Button title="I wrote it down" variant="text" onPress={() => setConfirm(true)} />}
+          <Button title="Copy" variant="outline" height={52} onPress={() => void copy()} />
+          {saved?.where === 'your note' ? null : <Pressable accessibilityRole="button" onPress={() => setConfirm(true)} style={{ minHeight: 44, justifyContent: 'center', alignItems: 'center' }}><Text size="sm" weight={500} color="accent">I wrote it down</Text></Pressable>}
           <Pressable accessibilityRole="button" onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} style={{ minHeight: 44, justifyContent: 'center', alignItems: 'center' }}>
             <Text size="sm" color="text2">Skip for now</Text>
           </Pressable>

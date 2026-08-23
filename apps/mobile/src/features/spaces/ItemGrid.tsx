@@ -5,6 +5,7 @@ import { db as coreDb, type Item } from '@engram/core';
 import { Card } from '../library/Card';
 import { ListRow } from '../library/ListRow';
 import type { Entry } from '../library/useLibrary';
+import { gridLayout } from '../library/format';
 import { engram, useSettings } from '../../lib/engram';
 import { useTheme } from '../../theme/useTheme';
 import { Hairline } from '../../ui';
@@ -19,17 +20,14 @@ export function toEntry(item: Item): Entry {
 }
 
 // The Library's grid/list, reduced to what a filtered view needs (no selection, no paging).
-export function ItemGrid({ entries, header }: { entries: Entry[]; header?: React.ReactElement }) {
+export function ItemGrid({ entries, header, onOpen }: { entries: Entry[]; header?: React.ReactElement; onOpen?: (id: string) => void }) {
   const { space } = useTheme();
   const { width } = useWindowDimensions();
   const router = useRouter();
   const ui = useSettings((s) => s.ui);
-  const dense = ui.density === 'compact';
   const grid = ui.view === 'grid';
-  const cols = dense ? 3 : 2;
-  const gutter = dense ? 4 : 8;
-  const colW = Math.floor((width - PAD * 2 - gutter * (cols - 1)) / cols);
-  const open = (id: string) => router.push(`/card/${id}`); // the detail screen records the open
+  const { cols, gutter, colW, dense } = gridLayout(ui.density, width, PAD);
+  const open = (id: string) => { onOpen?.(id); router.push(`/card/${id}`); }; // the detail screen records the open
   return (
     <FlashList
       key={`${grid ? 'g' : 'l'}${cols}`}

@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Chip, Text } from '../../src/ui';
+import { Chip, Text, useKeyboardHeight } from '../../src/ui';
 import { engram } from '../../src/lib/engram';
 import { useTheme } from '../../src/theme/useTheme';
 
@@ -10,12 +10,15 @@ const FONT = 17;
 const LINE = Math.round(FONT * 1.55);
 
 // Focus-mode editor: text, Done, tags. Saves debounced; a new note becomes an item on the first pause.
-export default function NoteEditor() {
+// Also mounted by the card detail for notes, so there is one editor; `id` then comes as a prop.
+export default function NoteEditor({ id }: { id?: string } = {}) {
   const { c, space, font } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { id: param } = useLocalSearchParams<{ id: string }>();
+  const { id: route } = useLocalSearchParams<{ id: string }>();
+  const param = id ?? route;
   const idRef = useRef<string | null>(param === 'new' || !param ? null : param);
+  const kb = useKeyboardHeight(); // edge-to-edge window never resizes for the keyboard, so the tag row lifts itself
   const e = engram();
   const initial = idRef.current ? e.db.items.get(idRef.current) : undefined;
   const [text, setText] = useState(initial?.body ?? '');
@@ -87,7 +90,7 @@ export default function NoteEditor() {
   });
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, backgroundColor: c.bg }}>
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
       <View style={{ paddingTop: insets.top + space[2], paddingHorizontal: space[4], height: insets.top + 52, flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center' }}>
         <Pressable accessibilityRole="button" onPress={done} hitSlop={12} style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: space[2] }}>
           <Text weight={500} color="accent">Done</Text>
@@ -110,7 +113,7 @@ export default function NoteEditor() {
           </TextInput>
         </Pressable>
       </ScrollView>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: space[2], paddingHorizontal: space[4], paddingTop: space[2], paddingBottom: Math.max(insets.bottom, space[3]) }}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: space[2], paddingHorizontal: space[4], paddingTop: space[2], paddingBottom: kb ? kb + space[2] : Math.max(insets.bottom, space[3]) }}>
         {tags.map((t) => <Chip key={t} label={t} mono onPress={() => removeTag(t)} />)}
         <TextInput
           value={tagDraft}
@@ -126,6 +129,6 @@ export default function NoteEditor() {
           style={{ minHeight: 44, minWidth: 96, flexGrow: 1, fontFamily: font.mono, fontSize: 14, color: c.text }}
         />
       </View>
-    </KeyboardAvoidingView>
+    </View>
   );
 }

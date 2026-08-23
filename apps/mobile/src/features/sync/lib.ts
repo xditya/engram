@@ -28,7 +28,7 @@ export const phraseSaved = {
 
 // Fresh device: the recovery phrase lives in the password manager.
 export const KEYCHAIN = { service: 'app.engram.recovery', user: 'engram recovery phrase' };
-export const passwordManagerName = () => (RN.OS === 'ios' ? 'iCloud Keychain' : 'the device keystore');
+export const passwordManagerName = () => (RN.OS === 'ios' ? 'iCloud Keychain' : 'Google Password Manager');
 
 export const deviceIcon = (name: string) => {
   const n = name.toLowerCase();

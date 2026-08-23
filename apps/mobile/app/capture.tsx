@@ -78,7 +78,7 @@ export default function CaptureSheet() {
 
   const tiles: { icon: IconName; label: string; hint: string; onPress: () => void }[] = [
     { icon: 'type-note', label: 'Note', hint: 'Start typing', onPress: () => router.replace('/note/new' as never) },
-    { icon: 'type-link', label: 'Paste', hint: 'From clipboard', onPress: paste },
+    { icon: 'type-link', label: 'Paste', hint: 'Link on clipboard', onPress: paste },
     { icon: 'type-image', label: 'Photo / File', hint: 'From your library', onPress: photoOrFile },
     { icon: 'type-article', label: 'Camera', hint: 'Scan to text', onPress: camera },
   ];

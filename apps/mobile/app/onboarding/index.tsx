@@ -1,5 +1,6 @@
+import { useEffect } from 'react';
 import { View } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { Trace } from '../../src/icons/Icon';
 import { Step } from '../../src/features/onboarding/Step';
@@ -9,14 +10,18 @@ import { Button, Text } from '../../src/ui';
 export default function Welcome() {
   const { c, space, motion } = useTheme();
   const router = useRouter();
+  // The mark is a filled shape, so it draws itself in by revealing left to right over one 600 ms stroke.
+  const drawn = useSharedValue(0);
+  useEffect(() => { drawn.value = withTiming(1, { duration: motion.stroke, easing: Easing.out(Easing.cubic) }); }, [drawn, motion.stroke]);
+  const reveal = useAnimatedStyle(() => ({ width: 64 * drawn.value }));
   return (
     <Step n={1} footer={<Button title="Begin" height={52} onPress={() => router.push('/onboarding/save')} />}>
       <View style={{ alignItems: 'center', paddingTop: space[7], gap: space[5] }}>
-        <Animated.View entering={FadeIn.duration(motion.stroke)}>
+        <Animated.View style={[{ height: 64, overflow: 'hidden' }, reveal]}>
           <Trace size={64} color={c.accent} />
         </Animated.View>
         <Text size="display" weight={600}>engram</Text>
-        <Text color="text2" style={{ textAlign: 'center' }}>Save anything. Find it later. It never leaves your device.</Text>
+        <Text color="text2" style={{ textAlign: 'center' }}>Save anything. Find it later. It stays yours.</Text>
         <Button title="I already use engram on another device" variant="text" onPress={() => router.push('/sync/link')} />
       </View>
     </Step>

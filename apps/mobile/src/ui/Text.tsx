@@ -1,4 +1,4 @@
-import { Text as RNText, type TextProps as RNTextProps } from 'react-native';
+import { StyleSheet, Text as RNText, type TextProps as RNTextProps } from 'react-native';
 import { useTheme } from '../theme/useTheme';
 
 type Size = keyof typeof import('../theme/theme').theme.font.size;
@@ -18,7 +18,7 @@ const family = (mono: boolean, w: Weight) =>
 
 export function Text({ size = 'md', weight = 400, mono = false, color = 'text', lineHeight, style, ...rest }: TextProps) {
   const t = useTheme();
-  const px = t.font.size[size];
+  const px = (StyleSheet.flatten(style)?.fontSize as number | undefined) ?? t.font.size[size];
   const lh = lineHeight ?? (px >= 22 ? 'tight' : 'body');
   return (
     <RNText

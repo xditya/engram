@@ -30,7 +30,7 @@ export default function Intelligence() {
   const apply = async () => {
     if (mode === 'key') {
       await engram?.secrets.set('apiKey', key.trim());
-      patch('intelligence', { mode, provider, summaries: true });
+      patch('intelligence', { mode, provider, summaries: false });
     } else if (mode === 'on-device') {
       patch('intelligence', { mode, summaries: false });
     } else {
@@ -50,8 +50,9 @@ export default function Intelligence() {
       <Text size="xxl" weight={600}>Intelligence</Text>
       <Text color="text2">Tags, summaries and visual search. Run on this device or bring your own key.</Text>
       <Card
-        title={`On this device · ${onDeviceTier() === 'recommended' ? 'Recommended' : 'Experimental'}`}
-        body={onDeviceReason ?? 'Private and free. Tags and visual search; summaries are off by default. Downloads a model once (~1 GB, Wi-Fi only).'}
+        title="On this device"
+        badge={onDeviceTier() === 'recommended' && !onDeviceReason ? 'Recommended' : 'Experimental'}
+        body={onDeviceReason ? `May be slow on this phone. ${onDeviceReason}` : 'Private and free. Tags and visual search; summaries are off by default. Downloads a model once (~1 GB, Wi-Fi only).'}
         disabled={!!onDeviceReason}
         selected={mode === 'on-device'}
         onPress={() => setMode('on-device')}

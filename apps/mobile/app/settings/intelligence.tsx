@@ -108,15 +108,16 @@ export default function Intelligence() {
     <Page title="Intelligence">
       <Text size="sm" color="text2">Tags, summaries and visual search. Run on this device or bring your own key.</Text>
 
-      {offered ? (
-        <RadioCard
+      <RadioCard
           title="On this device"
-          badge={onDeviceTier() === 'recommended' ? 'Recommended' : 'Experimental'}
-          body={`Private and free. Tags and visual search; summaries are off by default. Downloads a model once (${MODEL_SIZE}, Wi-Fi only).${onDeviceTier() === 'experimental' ? ' May be slow on this phone.' : ''}`}
+          badge={offered && onDeviceTier() === 'recommended' ? 'Recommended' : 'Experimental'}
+          body={offered
+            ? `Private and free. Tags and visual search; summaries are off by default. Downloads a model once (${MODEL_SIZE}, Wi-Fi only).${onDeviceTier() === 'experimental' ? ' May be slow on this phone.' : ''}`
+            : `Private and free. Tags and visual search. ${engram?.onDeviceReason ?? 'Not available on this phone.'}`}
           selected={s.mode === 'on-device'}
-          onPress={() => { if (ready) set({ mode: 'on-device' }); else void download(); }}
+          onPress={() => { if (!offered) return; if (ready) set({ mode: 'on-device' }); else void download(); }}
         >
-          {dl ? (
+          {!offered ? null : dl ? (
             <View style={{ gap: space[2] }}>
               <ProgressLine />
               <Text size="xs" mono color="text3">{MODEL_SIZE} · {Math.round(((dl.llm + dl.embed) / 2) * 100)}%</Text>
@@ -130,11 +131,8 @@ export default function Intelligence() {
             <Button title="Download" variant="outline" onPress={() => void download()} />
           )}
         </RadioCard>
-      ) : engram?.onDeviceReason ? (
-        <Text size="xs" color="text3">On this device: {engram.onDeviceReason}</Text>
-      ) : null}
 
-      <RadioCard title="Bring a key" body="Use a provider you already pay. Your key stays in this phone's keychain." selected={s.mode === 'key'} onPress={() => { if (s.mode !== 'key') choose(s.provider ?? 'anthropic'); }}>
+      <RadioCard title="Bring a key" body="" selected={s.mode === 'key'} onPress={() => { if (s.mode !== 'key') choose(s.provider ?? 'anthropic'); }}>
         <Segmented options={SEGMENTS} value={seg} onChange={(id) => choose(id === 'custom' ? 'custom' : id)} />
         {seg === 'custom' ? (
           <>
@@ -172,7 +170,7 @@ export default function Intelligence() {
 
       <RadioCard title="Off" body="Search still works on titles, text and tags you add." selected={s.mode === 'off'} onPress={() => set({ mode: 'off' })} />
 
-      {s.mode !== 'off' && bf && bf.count > 0 ? (
+      {s.mode !== 'off' && (s.mode !== 'key' || check.state === 'ok') && bf && bf.count > 0 ? (
         <Group>
           <ToggleRow
             title={`Process existing saves (${n(bf.count)})`}

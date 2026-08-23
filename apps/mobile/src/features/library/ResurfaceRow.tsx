@@ -19,15 +19,15 @@ export function ResurfaceRow({ count, onPress }: { count: number; onPress: () =>
   if (hidden || count < 50 || !faint) return null;
   const dismiss = () => { setHidden(true); try { stamp().write(String(Date.now())); } catch { /* web */ } };
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', paddingLeft: space[4], paddingRight: space[1], minHeight: 44, gap: space[2] }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: space[1], paddingTop: 4, paddingBottom: 10, gap: space[2] }}>
       <Trace size={14} opacity={0.4} />
-      <Pressable accessibilityRole="button" onPress={onPress} style={{ flex: 1, minHeight: 44, justifyContent: 'center' }}>
-        <Text size="sm" color="text2">
-          <Text size="sm" mono color="text2">{faint}</Text> faint traces · <Text size="sm" weight={500} color="text">Resurface</Text>
+      <Pressable accessibilityRole="button" onPress={onPress} hitSlop={12} style={{ flex: 1, justifyContent: 'center' }}>
+        <Text size="xs" color="text2" style={{ fontSize: 13 }}>
+          {faint} faint traces · <Text size="xs" weight={500} color="text" style={{ fontSize: 13 }}>Resurface</Text>
         </Text>
       </Pressable>
-      <Pressable accessibilityRole="button" accessibilityLabel="Dismiss" onPress={dismiss} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
-        <Text size="md" color="text3">{'✕'}</Text>
+      <Pressable accessibilityRole="button" accessibilityLabel="Dismiss" onPress={dismiss} hitSlop={12} style={{ justifyContent: 'center' }}>
+        <Text size="xs" color="text3" style={{ fontSize: 13 }}>{'✕'}</Text>
       </Pressable>
     </View>
   );

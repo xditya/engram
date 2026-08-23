@@ -13,11 +13,11 @@ export function Page({ title, children }: { title: string; children: ReactNode }
     <Screen>
       <View style={{ flexDirection: 'row', alignItems: 'center', height: 52, paddingHorizontal: space[2] }}>
         <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => router.back()} hitSlop={8} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
-          <Text size="xl" color="text2">‹</Text>
+          <Text size="sm" color="text2" style={{ fontSize: 15 }}>‹</Text>
         </Pressable>
         <Text weight={600} style={{ fontSize: 17 }}>{title}</Text>
       </View>
-      <ScrollView contentContainerStyle={{ paddingHorizontal: space[4], paddingBottom: space[7], gap: space[5] }} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={{ paddingHorizontal: space[3], paddingBottom: space[7], gap: space[5] }} keyboardShouldPersistTaps="handled">
         {children}
       </ScrollView>
     </Screen>
@@ -41,7 +41,7 @@ export function Group({ label, children }: { label?: string; children: ReactNode
 export function ToggleRow({ title, subtitle, value, onChange, disabled }: { title: string; subtitle?: string; value: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
   const { c, space } = useTheme();
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', minHeight: 56, paddingHorizontal: space[4], paddingVertical: space[3], gap: space[3], opacity: disabled ? 0.4 : 1 }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 13, gap: space[3], opacity: disabled ? 0.4 : 1 }}>
       <View style={{ flex: 1 }}>
         <Text style={{ fontSize: 15 }}>{title}</Text>
         {subtitle ? <Text size="xs" color="text2" style={{ fontSize: 13 }}>{subtitle}</Text> : null}
@@ -55,7 +55,7 @@ export function ToggleRow({ title, subtitle, value, onChange, disabled }: { titl
 export function RadioRow({ title, subtitle, selected, onPress }: { title: string; subtitle?: string; selected: boolean; onPress: () => void }) {
   const { space } = useTheme();
   return (
-    <Pressable accessibilityRole="radio" accessibilityState={{ selected }} onPress={onPress} style={{ flexDirection: 'row', alignItems: 'center', minHeight: 56, paddingHorizontal: space[4], paddingVertical: space[3], gap: space[3] }}>
+    <Pressable accessibilityRole="radio" accessibilityState={{ selected }} onPress={onPress} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 13, gap: space[3] }}>
       <View style={{ flex: 1 }}>
         <Text style={{ fontSize: 15 }}>{title}</Text>
         {subtitle ? <Text size="xs" color="text2" style={{ fontSize: 13 }}>{subtitle}</Text> : null}
@@ -69,13 +69,13 @@ export function RadioRow({ title, subtitle, selected, onPress }: { title: string
 export function RadioCard({ title, body, selected, onPress, badge, children }: { title: string; body: string; selected: boolean; onPress: () => void; badge?: string; children?: ReactNode }) {
   const { c, space } = useTheme();
   return (
-    <Pressable accessibilityRole="radio" accessibilityState={{ selected }} onPress={onPress} style={{ backgroundColor: c.surface, borderRadius: 14, borderWidth: 1, borderColor: selected ? c.accent : c.line, padding: space[4], gap: space[2] }}>
+    <Pressable accessibilityRole="radio" accessibilityState={{ selected }} onPress={onPress} style={{ backgroundColor: selected ? c.accentSoft : c.surface, borderRadius: 14, padding: space[4], gap: space[2] }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[2] }}>
         <View style={{ width: 18, height: 18, borderRadius: 9, borderWidth: selected ? 6 : 1.5, borderColor: selected ? c.accent : c.text3 }} />
         <Text size="md" weight={500} style={{ flex: 1 }}>{title}</Text>
         {badge ? <Text size="xs" mono color="text3">{badge}</Text> : null}
       </View>
-      <Text size="sm" color="text2">{body}</Text>
+      {body ? <Text size="sm" color="text2">{body}</Text> : null}
       {selected && children ? <View style={{ gap: space[3], paddingTop: space[2] }}>{children}</View> : null}
     </Pressable>
   );
@@ -84,7 +84,7 @@ export function RadioCard({ title, body, selected, onPress, badge, children }: {
 export function Segmented<T extends string>({ options, value, onChange }: { options: { id: T; label: string }[]; value: T; onChange: (v: T) => void }) {
   const { c } = useTheme();
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
       {options.map((o) => {
         const on = o.id === value;
         return (
@@ -93,7 +93,7 @@ export function Segmented<T extends string>({ options, value, onChange }: { opti
           </Pressable>
         );
       })}
-    </ScrollView>
+    </View>
   );
 }
 

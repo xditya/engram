@@ -19,21 +19,20 @@ export function ListRow({ entry, dense, selecting, selected, onPress, onLongPres
       accessibilityState={{ selected }}
       onPress={onPress}
       onLongPress={onLongPress}
-      style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', minHeight: dense ? 44 : 56, paddingHorizontal: space[3], gap: space[3], backgroundColor: selected ? c.accentSoft : pressed ? c.surface2 : c.surface })}
+      style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', minHeight: dense ? 44 : 56, paddingHorizontal: 14, gap: space[3], backgroundColor: selected ? c.accentSoft : pressed ? c.surface2 : c.surface })}
     >
       {uri ? (
-        <Image source={{ uri }} style={{ width: size, height: size, borderRadius: 6, backgroundColor: c.surface2 }} contentFit="cover" accessibilityIgnoresInvertColors />
+        <Image source={{ uri }} style={{ width: size, height: size, borderRadius: 8, backgroundColor: c.surface2 }} contentFit="cover" cachePolicy="memory-disk" transition={120} accessibilityIgnoresInvertColors />
       ) : (
-        <View style={{ width: size, height: size, borderRadius: 6, backgroundColor: c.surface2, alignItems: 'center', justifyContent: 'center' }}>
+        <View style={{ width: size, height: size, borderRadius: 8, backgroundColor: c.surface2, alignItems: 'center', justifyContent: 'center' }}>
           <Icon name={typeIcon(item.type)} size={18} />
         </View>
       )}
       <View style={{ flex: 1 }}>
         <Text size="sm" weight={500} numberOfLines={1}>{item.title ?? item.body?.split('\n')[0] ?? item.url ?? 'Untitled'}</Text>
-        <View style={{ flexDirection: 'row', gap: 6 }}>
-          {item.domain ? <Text size="xs" color="text2" numberOfLines={1} style={{ flexShrink: 1 }}>{item.domain}{' · '}</Text> : null}
-          <Text size="xs" mono color="text2" style={{ fontSize: 11 }}>{shortDate(item.created_at)}</Text>
-        </View>
+        <Text size="xs" color="text2" numberOfLines={1}>
+          {item.domain ? `${item.domain} · ` : ''}<Text size="xs" mono color="text2" style={{ fontSize: 11 }}>{shortDate(item.created_at)}</Text>
+        </Text>
       </View>
       {selecting ? (
         <View style={{ width: 22, height: 22, borderRadius: 11, borderWidth: selected ? 0 : 1.5, borderColor: c.line, backgroundColor: selected ? c.accent : 'transparent', alignItems: 'center', justifyContent: 'center' }}>

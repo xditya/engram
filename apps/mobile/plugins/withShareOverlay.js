@@ -75,6 +75,9 @@ module.exports = function withShareOverlay(config) {
   });
   config = withAndroidStyles(config, (c) => {
     const styles = c.modResults.resources.style ?? (c.modResults.resources.style = []);
+    // Android's default focus highlight paints a grey slab over background-less pressables when the device leaves touch mode.
+    const app = styles.find((s) => s.$.name === 'AppTheme');
+    if (app) { app.item = (app.item ?? []).filter((it) => it.$.name !== 'android:defaultFocusHighlightEnabled'); app.item.push({ $: { name: 'android:defaultFocusHighlightEnabled' }, _: 'false' }); }
     const i = styles.findIndex((s) => s.$.name === THEME);
     if (i >= 0) styles.splice(i, 1);
     styles.push({ $: { name: THEME, parent: 'AppTheme' }, item: Object.entries(THEME_ITEMS).map(([name, _]) => ({ $: { name }, _ })) });

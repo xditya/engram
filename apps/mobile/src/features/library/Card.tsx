@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { Trace } from '../../icons/Icon';
 import { useTheme } from '../../theme/useTheme';
-import { Text } from '../../ui';
+import { Fade, Text } from '../../ui';
 import { duration, parseMeta } from './format';
 import type { Entry } from './useLibrary';
 
@@ -25,12 +25,19 @@ export function Card({ entry, width, selecting, selected, showTrace, fresh, onPr
   const ratio = thumb?.w && thumb.h ? Math.min(2, Math.max(0.5, thumb.h / thumb.w)) : 1;
   const meta = parseMeta(item.meta);
   const pad = space[3];
+  const media = item.type === 'image' || item.type === 'video';
+  const bottom = showTrace && !media ? pad + 14 : pad; // text cards leave room for the trace at left 12 / bottom 10
 
   const img = uri
     ? <Image source={{ uri }} style={{ width, height: Math.round(width * ratio), backgroundColor: c.surface2 }} contentFit="cover" accessibilityIgnoresInvertColors />
     : null;
   const block = (h: number) => <View style={{ width, height: Math.round(width * h), backgroundColor: c.surface2 }} />;
-  const domain = item.domain ? <Text size="xs" mono color="text3" numberOfLines={1}>{item.domain}</Text> : null;
+  // Article thumb: inset 12 px inside the card, 84 px high, radius 6.
+  const inset = uri
+    ? <Image source={{ uri }} style={{ width: width - pad * 2, height: 84, borderRadius: radius.sm, backgroundColor: c.surface2, marginBottom: 4 }} contentFit="cover" accessibilityIgnoresInvertColors />
+    : null;
+  const domain = item.domain ? <Text size="xs" mono color="text3" numberOfLines={1} style={{ fontSize: 11 }}>{item.domain}</Text> : null;
+  const title = (t: string) => <Text size="sm" weight={500} numberOfLines={2} style={{ lineHeight: 18 }}>{t}</Text>;
 
   let body: ReactNode;
   switch (item.type) {
@@ -39,20 +46,18 @@ export function Card({ entry, width, selecting, selected, showTrace, fresh, onPr
       break;
     case 'note':
       body = (
-        <View style={{ padding: pad }}>
+        <View style={{ paddingHorizontal: pad, paddingTop: pad, paddingBottom: bottom }}>
           <Text size="sm" lineHeight="body" numberOfLines={6} style={{ fontSize: 13 }}>{item.body ?? item.title ?? ''}</Text>
-          <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 24 }}>
-            {[0.35, 0.65, 0.9].map((o) => <View key={o} style={{ flex: 1, backgroundColor: c.surface, opacity: o }} />)}
-          </View>
+          <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, bottom: bottom, height: 18 }}><Fade color={c.surface} solidAt={1} /></View>
         </View>
       );
       break;
     case 'quote':
       body = (
-        <View style={{ padding: pad, gap: space[1] }}>
-          <Text color="text3" style={{ fontSize: 24, lineHeight: 24 }}>{'“'}</Text>
-          <Text size="sm" lineHeight="body">{item.body ?? item.title ?? ''}</Text>
-          {item.domain || item.title ? <Text size="xs" mono color="text3" numberOfLines={1}>{item.domain ?? item.title}</Text> : null}
+        <View style={{ paddingHorizontal: pad, paddingTop: pad, paddingBottom: bottom }}>
+          <Text weight={600} style={{ fontSize: 24, lineHeight: 16 }}>{'“'}</Text>
+          <Text size="sm" style={{ lineHeight: 20, marginTop: 6 }}>{item.body ?? item.title ?? ''}</Text>
+          {item.domain || item.title ? <Text size="xs" mono color="text3" numberOfLines={1} style={{ fontSize: 11, marginTop: 6 }}>{item.domain ?? item.title}</Text> : null}
         </View>
       );
       break;
@@ -61,11 +66,10 @@ export function Card({ entry, width, selecting, selected, showTrace, fresh, onPr
         <View>
           {img ?? block(0.56)}
           {typeof meta.duration === 'number' ? (
-            <View style={{ position: 'absolute', right: 6, top: Math.round(width * (img ? ratio : 0.56)) - 26, paddingHorizontal: 6, height: 20, borderRadius: 4, justifyContent: 'center', backgroundColor: dark ? 'rgba(237,239,242,0.14)' : 'rgba(21,23,26,0.82)' }}>
-              <Text size="xs" mono style={{ fontSize: 11, lineHeight: 14, color: dark ? c.text : '#FFFFFF' }}>{duration(meta.duration)}</Text>
+            <View style={{ position: 'absolute', right: 8, bottom: 8, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 5, backgroundColor: dark ? 'rgba(237,239,242,0.14)' : 'rgba(21,23,26,0.82)' }}>
+              <Text size="xs" mono style={{ fontSize: 10, lineHeight: 13, color: dark ? c.text : c.surface }}>{duration(meta.duration)}</Text>
             </View>
           ) : null}
-          {item.title ? <Text size="sm" weight={500} numberOfLines={2} style={{ padding: pad }}>{item.title}</Text> : null}
         </View>
       );
       break;
@@ -73,26 +77,22 @@ export function Card({ entry, width, selecting, selected, showTrace, fresh, onPr
       body = (
         <View>
           {img}
-          <View style={{ padding: pad, gap: 2 }}>
-            {item.title ? <Text size="sm" weight={500} numberOfLines={2}>{item.title}</Text> : null}
-            {typeof meta.price === 'string' || typeof meta.price === 'number' ? <Text size="sm" mono>{String(meta.price)}</Text> : null}
-            {domain}
+          <View style={{ paddingHorizontal: pad, paddingTop: pad, paddingBottom: bottom, gap: 6 }}>
+            {item.title ? title(item.title) : null}
+            <Text size="xs" mono color="text3" numberOfLines={1} style={{ fontSize: 11 }}>
+              {typeof meta.price === 'string' || typeof meta.price === 'number' ? <Text size="xs" mono style={{ fontSize: 11 }}>{String(meta.price)}{item.domain ? ' · ' : ''}</Text> : null}
+              {item.domain}
+            </Text>
           </View>
         </View>
       );
       break;
-    default: // article, link, pdf, book, recipe, tweet, repo, file
+    default: // article, link, pdf, book, recipe, tweet, repo, file: thumb inset when there is one, text-only otherwise
       body = (
-        <View>
-          {img ?? (
-            <View style={{ width, height: Math.round(width * 0.6), backgroundColor: c.surface2, alignItems: 'center', justifyContent: 'center' }}>
-              <Text size="display" color="text3">{(item.domain ?? item.title ?? '?').charAt(0).toUpperCase()}</Text>
-            </View>
-          )}
-          <View style={{ padding: pad, gap: 2 }}>
-            <Text size="sm" weight={500} numberOfLines={2}>{item.title ?? item.url ?? 'Untitled'}</Text>
-            {domain}
-          </View>
+        <View style={{ paddingHorizontal: pad, paddingTop: pad, paddingBottom: bottom, gap: 6 }}>
+          {inset}
+          {title(item.title ?? item.url ?? 'Untitled')}
+          {domain}
         </View>
       );
   }
@@ -106,17 +106,17 @@ export function Card({ entry, width, selecting, selected, showTrace, fresh, onPr
         accessibilityState={{ selected }}
         onPress={onPress}
         onLongPress={onLongPress}
-        style={({ pressed }) => ({ width, borderRadius: radius.md, overflow: 'hidden', backgroundColor: c.surface, opacity: pressed ? 0.85 : 1, paddingBottom: showTrace && item.type !== 'image' ? 20 : 0 })}
+        style={({ pressed }) => ({ width, borderRadius: radius.md, overflow: 'hidden', backgroundColor: c.surface, opacity: pressed ? 0.85 : 1 })}
       >
         {body}
         {showTrace ? (
-          <View pointerEvents="none" style={{ position: 'absolute', left: pad, bottom: 6 }}>
-            <Trace size={12} opacity={trace.minOpacity + strength * (trace.maxOpacity - trace.minOpacity)} color={uri && item.type === 'image' ? '#FFFFFF' : c.text} />
+          <View pointerEvents="none" style={{ position: 'absolute', left: media ? 8 : pad, bottom: media ? 8 : 10 }}>
+            <Trace size={12} opacity={trace.minOpacity + strength * (trace.maxOpacity - trace.minOpacity)} color={uri && media ? (dark ? c.text : c.surface) : c.text} />
           </View>
         ) : null}
         {selecting ? (
           <View style={{ position: 'absolute', top: 8, right: 8, width: 22, height: 22, borderRadius: 11, borderWidth: selected ? 0 : 1.5, borderColor: c.line, backgroundColor: selected ? c.accent : c.surface, alignItems: 'center', justifyContent: 'center' }}>
-            {selected ? <Text size="xs" weight={600} style={{ color: dark ? c.bg : '#FFFFFF' }}>{'✓'}</Text> : null}
+            {selected ? <Text size="xs" weight={600} style={{ color: dark ? c.bg : c.surface }}>{'✓'}</Text> : null}
           </View>
         ) : null}
       </Pressable>

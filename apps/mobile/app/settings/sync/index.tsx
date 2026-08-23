@@ -1,5 +1,5 @@
-import { useCallback, useState, type ReactNode } from 'react';
-import { Linking, Platform as RN, ScrollView, Switch, TextInput, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { Linking, Platform as RN, ScrollView, Switch, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { storage } from '@engram/core';
 import { Icon } from '../../../src/icons/Icon';
@@ -8,6 +8,7 @@ import { useEngram, useLiveQuery, useSettings, useSyncStatus, useToast } from '.
 import type { SyncBackend } from '../../../src/lib/settings';
 import { Header } from '../../../src/features/sync/Header';
 import { BACKEND_NAME, hhmm, phraseSaved, retryErrors, unresolvedErrors } from '../../../src/features/sync/lib';
+import { Field, RadioCard } from '../../../src/features/settings/ui';
 import { useTheme } from '../../../src/theme/useTheme';
 import { Button, Hairline, ProgressLine, Row, Screen, Text } from '../../../src/ui';
 
@@ -21,19 +22,8 @@ export default function SyncSettings() {
   );
 }
 
-function Card({ title, body, children }: { title: string; body: string; children?: ReactNode }) {
-  const { c, radius, space } = useTheme();
-  return (
-    <View style={{ backgroundColor: c.surface, borderRadius: radius.md, padding: space[4], gap: space[3] }}>
-      <Text weight={500}>{title}</Text>
-      <Text size="sm" color="text2">{body}</Text>
-      {children}
-    </View>
-  );
-}
-
 function Chooser() {
-  const { c, space, font } = useTheme();
+  const { space } = useTheme();
   const router = useRouter();
   const { engram } = useEngram();
   const patch = useSettings((s) => s.patch);
@@ -73,33 +63,32 @@ function Chooser() {
       setDavState(/401|403|refused|unauthori/i.test(String((e as Error).message)) ? 'Server refused the login' : "Couldn't reach server");
     }
   }
-  const input = { backgroundColor: c.surface2, borderRadius: 8, minHeight: 44, paddingHorizontal: space[3], color: c.text, fontFamily: font.sans, fontSize: 15 } as const;
+  const [pick, setPick] = useState<SyncBackend>('off');
+  const ios = RN.OS === 'ios';
 
   return (
-    <ScrollView contentContainerStyle={{ padding: space[4], gap: space[3] }} keyboardShouldPersistTaps="handled">
-      <Text size="sm" color="text2" style={{ marginBottom: space[2] }}>
+    <ScrollView contentContainerStyle={{ padding: space[3], gap: space[3] }} keyboardShouldPersistTaps="handled">
+      <Text size="sm" color="text2" style={{ marginBottom: space[2], marginHorizontal: space[1] }}>
         Keep your library on your other devices through storage you already own. Always encrypted before it leaves this device.
       </Text>
-      <Card title="Google Drive" body="Uses a hidden app folder in your Drive. Google only ever stores encrypted files.">
-        {busy === 'gdrive' ? <ProgressLine /> : <Button title="Connect" onPress={google} />}
-      </Card>
-      <Card title="iCloud Drive" body="Uses your iCloud storage. Apple only ever stores encrypted files.">
-        {RN.OS === 'ios' ? (
-          <>
-            <Button title="Turn on" variant="outline" onPress={() => turnOn('icloud').catch((e) => show((e as Error).message))} />
-            <Text size="xs" color="text3">iCloud can take a few minutes to deliver changes between devices.</Text>
-          </>
-        ) : <Text size="sm" color="text3">Available on iPhone, iPad and Mac</Text>}
-      </Card>
-      <Card title="Advanced" body="Any WebDAV server: Nextcloud, a NAS, your own host.">
-        <TextInput style={[input, { fontFamily: font.mono }]} placeholder="Server URL" placeholderTextColor={c.text3} autoCapitalize="none" autoCorrect={false} keyboardType="url" value={dav.baseUrl} onChangeText={(baseUrl) => setDav({ ...dav, baseUrl })} accessibilityLabel="Server URL" />
-        <TextInput style={input} placeholder="Username" placeholderTextColor={c.text3} autoCapitalize="none" autoCorrect={false} value={dav.username} onChangeText={(username) => setDav({ ...dav, username })} accessibilityLabel="Username" />
-        <TextInput style={input} placeholder="Password" placeholderTextColor={c.text3} secureTextEntry value={dav.password} onChangeText={(password) => setDav({ ...dav, password })} accessibilityLabel="Password" />
+      <RadioCard title="Google Drive" body="Uses a hidden app folder in your Drive. Google only ever stores encrypted files." selected={pick === 'gdrive'} onPress={() => setPick('gdrive')}>
+        {busy === 'gdrive' ? <ProgressLine /> : <Button title="Sign in with Google" onPress={google} />}
+      </RadioCard>
+      <View style={{ opacity: ios ? 1 : 0.4 }} pointerEvents={ios ? 'auto' : 'none'}>
+        <RadioCard title="iCloud Drive" body={ios ? 'Uses your iCloud storage. Apple only ever stores encrypted files.' : 'Available on iPhone, iPad and Mac'} selected={pick === 'icloud'} onPress={() => setPick('icloud')}>
+          <Button title="Turn on" variant="outline" onPress={() => turnOn('icloud').catch((e) => show((e as Error).message))} />
+          <Text size="xs" color="text3">iCloud can take a few minutes to deliver changes between devices.</Text>
+        </RadioCard>
+      </View>
+      <RadioCard title="Advanced (WebDAV)" body="Any WebDAV server: Nextcloud, a NAS, your own host." selected={pick === 'webdav'} onPress={() => setPick('webdav')}>
+        <Field label="Server URL" placeholder="https://cloud.example.com/remote.php/dav/files/you/" keyboardType="url" value={dav.baseUrl} onChangeText={(baseUrl) => setDav({ ...dav, baseUrl })} />
+        <Field label="Username" value={dav.username} onChangeText={(username) => setDav({ ...dav, username })} />
+        <Field label="Password" secureTextEntry value={dav.password} onChangeText={(password) => setDav({ ...dav, password })} />
         {davState === 'Checking…' ? <ProgressLine /> : null}
-        {davState && davState !== 'Checking…' ? <Text size="sm" color={davState === 'Connected' ? 'accent' : 'text2'}>{davState}</Text> : null}
-        <Button title="Test" variant="outline" disabled={!dav.baseUrl || davState === 'Checking…'} onPress={() => void testDav()} />
-      </Card>
-      <Card title="This device only" body="Use Export for manual backups." />
+        {davState && davState !== 'Checking…' ? <Text size="sm" color={davState === 'Connected' ? 'accent' : 'danger'}>{davState}</Text> : null}
+        <Button title="Connect" variant="outline" disabled={!dav.baseUrl || davState === 'Checking…'} onPress={() => void testDav()} />
+      </RadioCard>
+      <RadioCard title="Off" body="Use Export for manual backups." selected={pick === 'off'} onPress={() => setPick('off')} />
     </ScrollView>
   );
 }

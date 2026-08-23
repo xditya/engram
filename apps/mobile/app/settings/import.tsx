@@ -7,7 +7,7 @@ import { estimate, modelOf, KEY_PAGES } from '../../src/features/settings/intell
 import { read, run, sourceName, type Picked, type Progress, type Tagging } from '../../src/features/settings/importer';
 import { Group, Page, RadioRow, n } from '../../src/features/settings/ui';
 import { useTheme } from '../../src/theme/useTheme';
-import { Button, ProgressLine, Text } from '../../src/ui';
+import { Button, ProgressLine, Row, Text } from '../../src/ui';
 
 export default function Import() {
   const { space } = useTheme();
@@ -68,6 +68,7 @@ export default function Import() {
         </View>
         {reading ? <ProgressLine /> : null}
         <Button title="Choose a file" onPress={pick} disabled={reading} height={52} />
+        <Group><Row title="Export" subtitle="Everything, including tags. Works without engram." onPress={() => router.push('/settings/export' as never)} /></Group>
       </Page>
     );
   }

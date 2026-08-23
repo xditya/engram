@@ -1,13 +1,12 @@
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { search as core } from '@engram/core';
 import { engram, useEngram, useToast } from '../../lib/engram';
 import { useTheme } from '../../theme/useTheme';
 import { Hairline, Screen, Text } from '../../ui';
 import { useRecent } from './recent';
-import { ResultRow } from './ResultRow';
+import { ItemGrid, toEntry } from '../spaces/ItemGrid';
 import { useSearch } from './useSearch';
 
 const OPERATORS = ['type:', 'tag:', 'site:', 'text:', 'before:', 'after:', 'color:', 'is:pinned', 'in:', '-exclude', '"exact"'];
@@ -18,7 +17,7 @@ function OpChip({ label, onPress }: { label: string; onPress: () => void }) {
   const { c } = useTheme();
   return (
     <Pressable accessibilityRole="button" onPress={onPress} hitSlop={6} style={{ minHeight: 32, paddingHorizontal: 10, justifyContent: 'center', backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, borderRadius: 7 }}>
-      <Text size="xs" mono color="text2" style={{ fontSize: 13 }}>{label}</Text>
+      <Text size="xs" mono style={{ fontSize: 13 }}>{label}</Text>
     </Pressable>
   );
 }
@@ -39,10 +38,7 @@ export function SearchScreen() {
     const last = core.tokenize(t).at(-1);
     if (t.endsWith(' ') && last?.kind === 'op') { setChips((cs) => [...cs, last.raw]); setText(''); } else setText(t);
   };
-  const commit = () => {
-    if (text.trim()) { setChips((cs) => [...cs, text.trim()]); setText(''); }
-    if (query) recent.add(query);
-  };
+  const commit = () => { if (query) recent.add(query); };
 
   const suggestions = useMemo(() => {
     if (!e || !text) return [];
@@ -60,12 +56,13 @@ export function SearchScreen() {
 
   return (
     <Screen>
-      <View style={{ margin: space[4], minHeight: 48, paddingHorizontal: space[3], paddingVertical: 6, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, backgroundColor: c.surface, borderRadius: 12, borderWidth: 1.5, borderColor: c.accent }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[3], marginHorizontal: space[4], marginTop: 18, marginBottom: 22 }}>
+      <View style={{ flex: 1, minHeight: 48, paddingHorizontal: 14, paddingVertical: 6, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, backgroundColor: c.surface, borderRadius: 12, borderWidth: 1.5, borderColor: c.accent }}>
         {chips.map((ch, i) => {
           const op = core.tokenize(ch)[0]?.kind === 'op';
           return (
             <Pressable key={`${ch}${i}`} accessibilityRole="button" accessibilityLabel={`Remove ${ch}`} hitSlop={8} onPress={() => setChips((cs) => cs.filter((_, j) => j !== i))}
-              style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, backgroundColor: op ? c.accentSoft : 'transparent' }}>
+              style={{ paddingHorizontal: 6, height: 26, justifyContent: 'center', alignSelf: 'center', borderRadius: 6, backgroundColor: op ? c.accentSoft : 'transparent' }}>
               <Text size="xs" mono style={{ fontSize: 13 }} color={op ? 'accent' : 'text'}>{ch}</Text>
             </Pressable>
           );
@@ -76,7 +73,6 @@ export function SearchScreen() {
           onChangeText={onChange}
           onSubmitEditing={commit}
           onKeyPress={(ev) => { if (ev.nativeEvent.key === 'Backspace' && !text) setChips((cs) => cs.slice(0, -1)); }}
-          placeholder={chips.length ? '' : 'Search'}
           placeholderTextColor={c.text3}
           cursorColor={c.accent}
           autoCapitalize="none"
@@ -84,13 +80,15 @@ export function SearchScreen() {
           returnKeyType="search"
           submitBehavior="submit"
           accessibilityLabel="Search"
-          style={{ flex: 1, minWidth: 80, paddingVertical: 4, fontFamily: 'GeistMono', fontSize: 14, color: c.text }}
+          style={{ flex: 1, minWidth: 80, height: 34, paddingVertical: 0, margin: 0, textAlignVertical: 'center', includeFontPadding: false, fontFamily: 'GeistMono', fontSize: 14, lineHeight: 18, color: c.text }}
         />
         {query ? (
-          <Pressable accessibilityRole="button" onPress={saveSpace} hitSlop={12} style={{ minHeight: 32, justifyContent: 'center' }}>
+          <Pressable accessibilityRole="button" onPress={saveSpace} hitSlop={12} style={{ height: 34, justifyContent: 'center', alignSelf: 'center' }}>
             <Text size="xs" weight={500} color="accent">Save as Space</Text>
           </Pressable>
         ) : null}
+      </View>
+      <Pressable accessibilityRole="button" onPress={() => router.back()} hitSlop={12}><Text size="sm" color="text2">Cancel</Text></Pressable>
       </View>
 
       {suggestions.length ? (
@@ -104,27 +102,22 @@ export function SearchScreen() {
           <Text size="xs" mono color="text3" style={{ paddingHorizontal: space[4], paddingBottom: space[2] }}>
             {hits.length ? `${hits.length} results · ${(ms / 1000).toFixed(2)} s` : `No results for "${query}"`}
           </Text>
-          <FlashList
-            data={hits}
-            keyExtractor={(i) => i.id}
-            keyboardShouldPersistTaps="handled"
-            renderItem={({ item }) => <ResultRow item={item} onPress={() => { recent.add(query); router.push({ pathname: "/card/[id]" as never, params: { id: item.id } }); }} />}
-          />
+          <ItemGrid entries={hits.map(toEntry)} onOpen={() => recent.add(query)} />
         </>
       ) : (
-        <ScrollView keyboardShouldPersistTaps="always" contentContainerStyle={{ paddingHorizontal: space[4], gap: space[3] }}>
+        <ScrollView keyboardShouldPersistTaps="always" contentContainerStyle={{ paddingHorizontal: space[4], gap: 10 }}>
           <Text size="xs" color="text3">Operators</Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space[2] }}>
             {OPERATORS.map((op) => <OpChip key={op} label={op} onPress={() => setText((t) => t + op)} />)}
           </View>
           {recent.list.length ? (
             <>
-              <Text size="xs" color="text3" style={{ marginTop: space[3] }}>Recent searches</Text>
-              <View style={{ backgroundColor: c.surface, borderRadius: 14 }}>
+              <Text size="xs" color="text3" style={{ marginTop: 14 }}>Recent searches</Text>
+              <View>
                 {recent.list.map((r, i) => (
                   <View key={r}>
                     {i ? <Hairline /> : null}
-                    <Pressable accessibilityRole="button" onPress={() => { setChips([]); setText(r); }} style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: space[4] }}>
+                    <Pressable accessibilityRole="button" onPress={() => { setChips([]); setText(r); }} hitSlop={6} style={{ paddingVertical: 11 }}>
                       <Text size="sm" mono>{r}</Text>
                     </Pressable>
                   </View>

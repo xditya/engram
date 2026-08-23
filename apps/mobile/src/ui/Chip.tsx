@@ -10,8 +10,8 @@ export function Chip({ label, active, mono, onPress }: { label: string; active?:
       accessibilityState={{ selected: !!active }}
       onPress={onPress}
       style={{
-        height: 32,
-        paddingHorizontal: 12,
+        paddingVertical: active ? 5 : 4,
+        paddingHorizontal: 10,
         borderRadius: 7,
         justifyContent: 'center',
         backgroundColor: active ? c.accentSoft : 'transparent',
@@ -19,7 +19,7 @@ export function Chip({ label, active, mono, onPress }: { label: string; active?:
         borderColor: c.line,
       }}
     >
-      <Text size="sm" mono={mono} weight={500} color={active ? 'accent' : 'text2'}>
+      <Text size="xs" mono={mono} weight={active ? 500 : 400} color={active ? 'accent' : 'text2'}>
         {label}
       </Text>
     </Pressable>

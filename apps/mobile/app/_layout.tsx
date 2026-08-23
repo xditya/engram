@@ -139,7 +139,7 @@ export default function RootLayout() {
         <Stack.Screen name="search" options={sheet} />
         <Stack.Screen name="card/[id]" options={sheet} />
         <Stack.Screen name="note/[id]" options={sheet} />
-        <Stack.Screen name="capture" options={{ presentation: 'formSheet', sheetAllowedDetents: [0.5, 1], gestureEnabled: true }} />
+        <Stack.Screen name="capture" options={{ presentation: 'formSheet', sheetAllowedDetents: 'fitToContents', sheetCornerRadius: 20, gestureEnabled: true }} />
         <Stack.Screen name="spaces" />
         <Stack.Screen name="spaces/[id]" />
         <Stack.Screen name="resurface" options={sheet} />

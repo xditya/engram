@@ -16,7 +16,7 @@ const EASE = Easing.bezier(0.33, 1, 0.68, 1);
 const NEVER = ReduceMotion.Never; // reduced motion is handled here by hand, so Reanimated must not skip
 const tm = (to: number, duration: number, delay = 0, easing: EasingFunction | typeof EASE = EASE) => withDelay(delay, withTiming(to, { duration, easing, reduceMotion: NEVER }), NEVER);
 const IDLE_MS = 7000;
-const CARD_H = 88, ROW_H = 64, TRACE = 28, SLOT = { x: 25, y: 32 }; // where the trace sets down inside the stage
+const CARD_H = 88, ROW_H = 64, TRACE = 28, SLOT = { x: 27, y: 32 }; // where the trace sets down inside the stage
 
 // Rest values for every shared value; a tap during the sequence jumps straight here.
 const REST = { scrim: 1, sheetY: 0, sheetOp: 1, clock: 1, cardOp: 0, contentOp: 0, traceOp: 1, settle: 1, size: 22 / TRACE, stageH: ROW_H, rowOp: 1, rowX: 0, rowContentOp: 1, belowOp: 1, pillOp: 0, pillY: -8, pillScale: 1 };
@@ -168,7 +168,7 @@ export function ShareOverlay({ intent, error, finish }: { intent: ShareIntentLik
                   <Animated.View key={title} entering={FadeIn.duration(200).easing(EASE)}><Text size="sm" weight={500} numberOfLines={1} style={{ fontSize: 15 }}>{title}</Text></Animated.View>
                   <Text size="xs" mono color="text3" numberOfLines={1} style={{ marginTop: 2 }}>{domain}</Text>
                 </View>
-                <Text size="md" color="text3">›</Text>
+                <Text size="xs" color="text3" style={{ fontSize: 13 }}>›</Text>
               </Animated.View>
             </Pressable>
           </Animated.View>
@@ -182,7 +182,7 @@ export function ShareOverlay({ intent, error, finish }: { intent: ShareIntentLik
           {item ? <Tags item={item} tags={tags} pending compact /> : <View style={{ height: 32 }} />}
           {spacesOpen && id ? <SpaceChips itemId={id} /> : null}
           <View style={{ flexDirection: 'row', gap: space[3] }}>
-            {hasSpaces && !spacesOpen && !failed ? <Button title="Add to Space" variant="outline" height={44} onPress={() => setSpacesOpen(true)} style={{ flex: 1 }} /> : null}
+            {!spacesOpen && !failed ? <Button title="Add to Space" variant="outline" height={44} disabled={!hasSpaces} onPress={() => setSpacesOpen(true)} style={{ flex: 1 }} /> : null}
             <Button title="Done" variant="outline" height={44} onPress={leave} style={{ flex: 1 }} />
           </View>
         </Animated.View>

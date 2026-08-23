@@ -117,3 +117,12 @@ describe('site enrichers', () => {
     expect(guessTypeFromUrl('not a url')).toBe('note');
   });
 });
+
+describe('readability types long prose as article', () => {
+  it('og:type=website with a real body becomes article', async () => {
+    const html = '<html><head><title>W</title><meta property="og:type" content="website"></head><body><article>' + '<p>' + 'Readable sentence here. '.repeat(40) + '</p>'.repeat(1) + '</article></body></html>';
+    const r = await runEnrichers('https://en.wikipedia.org/wiki/Memex', { platform: fakePlatform({}).platform, html });
+    expect(r.type).toBe('article');
+    expect(r.body).toContain('Readable sentence');
+  });
+});
