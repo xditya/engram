@@ -30,6 +30,19 @@ export default function About() {
         <Text size="xl" weight={600}>engram</Text>
         <Text size="xs" mono color="text3">{build ? `${version} (${build})` : version}</Text>
       </View>
+      <Group label="Made by Aditya S">
+        <View style={{ flexDirection: 'row', justifyContent: 'space-around', paddingVertical: space[3] }}>
+          {DEV.map((d) => (
+            <Pressable key={d.url} accessibilityRole="link" accessibilityLabel={d.label} onPress={() => Linking.openURL(d.url)} style={({ pressed }) => ({ alignItems: 'center', gap: space[2], minWidth: 88, minHeight: 44, opacity: pressed ? 0.6 : 1 })}>
+              <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: c.surface2, alignItems: 'center', justifyContent: 'center' }}>
+                <Icon name={d.icon} size={22} color={d.icon === 'coffee' ? c.accent : c.text} />
+              </View>
+              <Text size="xs" weight={500}>{d.label}</Text>
+            </Pressable>
+          ))}
+        </View>
+        <Text size="xs" color="text2" style={{ paddingBottom: space[3] }}>engram is free and open source. If it earns a place on your phone, a coffee keeps the lights on.</Text>
+      </Group>
       <View style={{ gap: space[3] }}>
         <Text size="lg" weight={500}>The longevity promise</Text>
         <Text size="sm" color="text2">Ours does not depend on us keeping any promise at all.</Text>
@@ -42,23 +55,9 @@ export default function About() {
           </View>
         ))}
       </View>
-      <Group label="Made by Aditya S">
-        <View style={{ flexDirection: 'row', justifyContent: 'space-around', paddingVertical: space[3] }}>
-          {DEV.map((d) => (
-            <Pressable key={d.url} accessibilityRole="link" accessibilityLabel={d.label} onPress={() => Linking.openURL(d.url)} style={({ pressed }) => ({ alignItems: 'center', gap: space[2], minWidth: 88, minHeight: 44, opacity: pressed ? 0.6 : 1 })}>
-              <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: c.surface2, alignItems: 'center', justifyContent: 'center' }}>
-                <Icon name={d.icon} size={22} color={d.icon === 'coffee' ? c.accent : c.text} />
-              </View>
-              <Text size="xs" weight={500}>{d.label}</Text>
-              <Text size="xs" mono color="text3" numberOfLines={1}>{d.value}</Text>
-            </Pressable>
-          ))}
-        </View>
-        <Text size="xs" color="text2" style={{ paddingBottom: space[3] }}>engram is free and open source. If it earns a place on your phone, a coffee keeps the lights on.</Text>
-      </Group>
       <Group label="Links">
-        <Row title="Website" value="engram.xditya.me" onPress={() => Linking.openURL(SITE)} />
-        <Row title="Source code" value="AGPL-3.0" onPress={() => Linking.openURL(`${SITE}/source`)} />
+        <Row title="Website" onPress={() => Linking.openURL(SITE)} />
+        <Row title="Source code" onPress={() => Linking.openURL(`${SITE}/source`)} />
         <Row title="Export format" onPress={() => Linking.openURL(`${SITE}/export-format`)} />
       </Group>
     </Page>
