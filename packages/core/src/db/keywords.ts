@@ -22,11 +22,10 @@ export function extractKeywords(title: string | null | undefined, text: string |
   for (const w of body) counts.set(w, (counts.get(w) ?? 0) + 1);
   for (const [w, n] of counts) if (n >= 2) out.set(w, (out.get(w) ?? 0) + n);
   for (const w of words(title ?? '')) out.set(w, (out.get(w) ?? 0) + 2);
-  return [...out.entries()]
-    .filter(([k]) => k.length <= 32)
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .slice(0, max)
-    .map(([k]) => k);
+  const ranked = [...out.entries()].filter(([k]) => k.length <= 32).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([k]) => k);
+  // A phrase ("example domain") absorbs its own words so the list doesn't say the same thing three times.
+  const phrases = ranked.filter((k) => k.includes(' ')).slice(0, max);
+  return ranked.filter((k) => k.includes(' ') || !phrases.some((p) => p.split(' ').includes(k))).slice(0, max);
 }
 
 // "en.wikipedia.org" -> "wikipedia"; "news.ycombinator.com" -> "ycombinator"; null for bare IPs/localhost.

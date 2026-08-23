@@ -23,6 +23,9 @@ describe('keywords', () => {
     const body = 'The memex is a device. Bush described the memex as a desk. Hypertext grew from the memex idea; hypertext links.';
     expect(extractKeywords('Memex - Wikipedia', body)).toEqual(['memex', 'wikipedia', 'hypertext']);
   });
+  it('a phrase absorbs its own words', () => {
+    expect(extractKeywords('Example Domain', 'This domain is for documentation. The domain is reserved.')).toEqual(['example domain']);
+  });
   it('returns nothing for tiny noise', () => {
     expect(extractKeywords('ok', 'the and of')).toEqual([]);
   });
