@@ -4,9 +4,11 @@ import Animated, { Easing, FadeIn, FadeOut, ReduceMotion, useReducedMotion } fro
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Item } from '@engram/core';
 import { Trace } from '../../icons/Icon';
-import { engram, useLiveQuery, useToast } from '../../lib/engram';
+import { engram, useLiveQuery } from '../../lib/hub';
+import { useToast } from '../../lib/toast';
 import { useTheme } from '../../theme/useTheme';
 import { Button, Hairline, Text } from '../../ui';
+import { textDefaults } from '../../ui/Text';
 import { shortDate, traceLine } from './format';
 import { openOriginal } from './content';
 import { shareItem } from './share';
@@ -55,6 +57,7 @@ export function Tags({ item, tags, pending, compact }: { item: Item; tags: strin
         ) : (
           <TextInput
             autoFocus
+            allowFontScaling={textDefaults.allowFontScaling}
             value={draft}
             onChangeText={setDraft}
             onSubmitEditing={() => add(draft)}

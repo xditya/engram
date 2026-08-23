@@ -12,6 +12,9 @@ export interface TextProps extends RNTextProps {
   lineHeight?: 'tight' | 'body' | 'reader';
 }
 
+// iOS share extensions mis-scale RN text with Dynamic Type on; the extension root turns scaling off before rendering.
+export const textDefaults = { allowFontScaling: true };
+
 // Fonts are registered in app/_layout.tsx under these exact family names.
 const family = (mono: boolean, w: Weight) =>
   mono ? (w === 400 ? 'GeistMono' : 'GeistMono-Medium') : w === 400 ? 'Geist' : w === 500 ? 'Geist-Medium' : 'Geist-SemiBold';
@@ -22,6 +25,7 @@ export function Text({ size = 'md', weight = 400, mono = false, color = 'text', 
   const lh = lineHeight ?? (px >= 22 ? 'tight' : 'body');
   return (
     <RNText
+      allowFontScaling={textDefaults.allowFontScaling}
       {...rest}
       style={[
         {

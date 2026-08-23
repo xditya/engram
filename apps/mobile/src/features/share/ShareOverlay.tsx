@@ -5,7 +5,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { Icon, Trace } from '../../icons/Icon';
-import { engram, useLiveQuery, type ShareIntentLike } from '../../lib/engram';
+import type { ShareIntentLike } from '../../lib/capture';
+import { engram, useLiveQuery } from '../../lib/hub';
 import { useTheme } from '../../theme/useTheme';
 import { Button, Text, useKeyboardHeight } from '../../ui';
 import { describe, glyph } from '../capture/ShareSheet';
@@ -24,7 +25,8 @@ const REST = { scrim: 1, sheetY: 0, sheetOp: 1, clock: 1, cardOp: 0, contentOp: 
 // The Save Moment: the sheet rises with the preview card; the card is pressed into the trace glyph, which sets
 // down where the memory row's mark lives; the row grows back out of it while the Saved pill springs in.
 // The save is committed before frame 0 — nothing here waits on network.
-export function ShareOverlay({ intent, error, finish }: { intent: ShareIntentLike; error?: string; finish: () => void }) {
+// `open` takes the card over to the app: Linking on Android; the iOS extension must go through its host-app API.
+export function ShareOverlay({ intent, error, finish, open = (url) => void Linking.openURL(url) }: { intent: ShareIntentLike; error?: string; finish: () => void; open?: (url: string) => void }) {
   const { c, dark, space, radius } = useTheme();
   const insets = useSafeAreaInsets();
   const kb = useKeyboardHeight();
@@ -111,7 +113,7 @@ export function ShareOverlay({ intent, error, finish }: { intent: ShareIntentLik
     return () => { clearTimeout(idle.current); show.remove(); hide.remove(); back.remove(); };
   }, [touch, leave]);
 
-  const openCard = () => { if (id) void Linking.openURL(`engram://card/${id}`); leave(); };
+  const openCard = () => { if (id) open(`engram://card/${id}`); leave(); };
 
   const scrimStyle = useAnimatedStyle(() => ({ opacity: scrim.value }));
   const sheetStyle = useAnimatedStyle(() => ({ opacity: sheetOp.value, transform: [{ translateY: sheetY.value }] }));

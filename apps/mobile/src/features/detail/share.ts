@@ -1,7 +1,7 @@
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { importExport, type Item } from '@engram/core';
-import { engram } from '../../lib/engram';
+import { engram } from '../../lib/hub';
 
 // Images share the original file; everything else goes out as one markdown file.
 export async function shareItem(item: Item): Promise<void> {

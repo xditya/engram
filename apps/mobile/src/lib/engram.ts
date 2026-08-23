@@ -1,17 +1,17 @@
-import { useEffect, useState, type DependencyList } from 'react';
 import { AppState, Platform as RN } from 'react-native';
-import { create } from 'zustand';
 import { randomUUID } from 'expo-crypto';
+import { File } from 'expo-file-system';
 import * as Network from 'expo-network';
-import { db as coreDb, migrate, type EngramDb, type Platform, type Queue } from '@engram/core';
+import { db as coreDb, migrate, type Platform } from '@engram/core';
 import { createFileStore, createOpSqliteDatabase, createSecureKeyStore, dataDir, fetchText, thumbnail } from '@engram/db-rn';
 import { ocr } from '../platform/ocr';
 import { createOnDevice, onDeviceUnavailableReason } from '../platform/onDevice';
-import { createCapture, type Capture } from './capture';
+import { createCapture } from './capture';
 import { createJobs } from './jobs';
-import { createSecrets, type Secrets } from './secrets';
+import { createSecrets } from './secrets';
 import { getSettings, useSettings } from './settings';
-import { createSyncService, type SyncService } from './sync';
+import { createSyncService } from './sync';
+import { bootWith, createEvents, DEVICE_ID_FILE, getBoot, useBootState, type Engram } from './hub';
 
 export type { Capture, CaptureOpts, ShareIntentLike } from './capture';
 export type { SyncService, SyncState, SyncStatus } from './sync';
@@ -19,34 +19,16 @@ export type { Secrets } from './secrets';
 export { useSyncStatus } from './sync';
 export { useSettings, getSettings, type Settings } from './settings';
 export { useToast } from './toast';
+export { engram, useLiveQuery, type Engram } from './hub';
 
-type Listener = () => void;
-
-export interface Engram {
-  platform: Platform;
-  db: EngramDb;
-  queue: Queue;
-  capture: Capture;
-  sync: SyncService;
-  secrets: Secrets;
-  deviceId: string;
-  events: { on(cb: Listener): () => void; emit(): void };
-  // Runs queued jobs until none are pending (extract/thumb/ocr/classify/embed). Also what picks up rows the
-  // iOS share target wrote straight into the App Group database.
-  drain(): Promise<void>;
-  onDeviceReason?: string; // why "On this device" is not offered; undefined when it is
-}
 
 export async function createEngram(): Promise<Engram> {
-  const listeners = new Set<Listener>();
-  const events = {
-    on: (cb: Listener) => { listeners.add(cb); return () => { listeners.delete(cb); }; },
-    emit: () => { for (const cb of listeners) cb(); },
-  };
+  const events = createEvents();
   const keys = createSecureKeyStore();
   const dir = dataDir();
   let deviceId = await keys.get('deviceId');
   if (!deviceId) { deviceId = randomUUID(); await keys.set('deviceId', deviceId); }
+  if (RN.OS === 'ios') try { new File(dir, DEVICE_ID_FILE).write(deviceId); } catch { /* the extension falls back to its own id */ }
   const secrets = createSecrets(keys);
   await secrets.load();
 
@@ -118,33 +100,6 @@ export async function createEngram(): Promise<Engram> {
 }
 
 // Boot once, app-wide. Screens read it through useEngram(); non-React code through getEngram().
-type Boot = { engram?: Engram; error?: Error };
-const useBoot = create<Boot>(() => ({}));
-let booting: Promise<void> | undefined;
-export function boot(): Promise<void> {
-  return booting ??= createEngram()
-    .then((engram) => useBoot.setState({ engram }))
-    .catch((e) => useBoot.setState({ error: e instanceof Error ? e : new Error(String(e)) }));
-}
-
-export function getEngram(): Boot { void boot(); return useBoot.getState(); }
-export function useEngram(): Boot { void boot(); return useBoot(); }
-// Throws before boot; for code paths that only run once the layout has rendered.
-export function engram(): Engram {
-  const { engram: e, error } = useBoot.getState();
-  if (!e) throw error ?? new Error('engram not booted');
-  return e;
-}
-
-// Runs `fn` now and again after every change event. Queries are synchronous (op-sqlite is JSI).
-export function useLiveQuery<T>(fn: (engram: Engram) => T, deps: DependencyList): T | undefined {
-  const { engram: e } = useEngram();
-  const [value, setValue] = useState<T | undefined>(() => (e ? fn(e) : undefined));
-  useEffect(() => {
-    if (!e) return;
-    setValue(fn(e));
-    return e.events.on(() => setValue(fn(e)));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [e, ...deps]);
-  return value;
-}
+export const boot = (): Promise<void> => bootWith(createEngram);
+export function getEngram() { void boot(); return getBoot(); }
+export function useEngram() { void boot(); return useBootState(); }

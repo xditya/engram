@@ -21,6 +21,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     associatedDomains: [`applinks:${DOMAIN}`, `webcredentials:${DOMAIN}`],
     entitlements: { 'com.apple.security.application-groups': [APP_GROUP] },
     infoPlist: {
+      AppGroup: APP_GROUP, // read by expo-share-extension (plugin and Swift) and EngramDiag
       NSPhotoLibraryUsageDescription: 'Save photos from your library into engram.',
       NSCameraUsageDescription: 'Capture a photo straight into engram.',
       NSPhotoLibraryAddUsageDescription: 'Export images from engram to your library.',
@@ -66,14 +67,29 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     }]))],
     // Listed before expo-share-intent: later plugins' manifest mods run first, and this one must see its filters.
     './plugins/withShareOverlay',
-    './plugins/withSideloadAppGroup',
+    // Android only (disableIOS): the iOS share sheet entry is expo-share-extension's target below, so exactly one
+    // .appex ships. Its native iOS module still compiles into the app; nothing imports it there.
     ['expo-share-intent', {
-      iosActivationRules: { NSExtensionActivationSupportsWebURLWithMaxCount: 1, NSExtensionActivationSupportsWebPageWithMaxCount: 1, NSExtensionActivationSupportsText: true, NSExtensionActivationSupportsImageWithMaxCount: 10, NSExtensionActivationSupportsMovieWithMaxCount: 1, NSExtensionActivationSupportsFileWithMaxCount: 10 },
-      iosAppGroupIdentifier: APP_GROUP,
-      // Also names the Xcode target (non-alphanumerics stripped); it must differ from the app target 'engram' or the plugin skips creating it.
-      iosShareExtensionName: 'Save to engram',
+      disableIOS: true,
       androidIntentFilters: ['text/*', 'image/*', 'video/*', '*/*'],
       androidMultiIntentFilters: ['image/*'],
+    }],
+    // iOS share extension running the Save Moment overlay (src/features/share/ShareExtensionRoot, entry
+    // index.share.js). Listed before expo-share-extension so withShareExtension's mods see its generated files.
+    './plugins/withShareExtension',
+    ['expo-share-extension', {
+      activationRules: [{ type: 'url', max: 1 }, { type: 'text' }, { type: 'image', max: 10 }, { type: 'video', max: 1 }, { type: 'file', max: 10 }],
+      backgroundColor: { red: 0, green: 0, blue: 0, alpha: 0 }, // the overlay draws its own scrim over the sharing app
+      // Expo modules left out of the extension target (pods and the generated modules provider). Everything the
+      // overlay imports stays; the rest would only cost launch memory inside the extension's ~120 MB budget.
+      excludedPackages: [
+        'expo-dev-client', 'expo-dev-launcher', 'expo-dev-menu', 'expo-dev-menu-interface', 'expo-updates-interface',
+        'expo-splash-screen', 'expo-router', 'expo-linking', 'expo-keep-awake', 'expo-system-ui', 'expo-symbols', 'expo-glass-effect',
+        '@expo/dom-webview', '@expo/ui', 'expo-camera', 'expo-media-library', 'expo-image-picker', 'expo-document-picker',
+        'expo-video-thumbnails', 'expo-background-task', 'expo-task-manager', 'expo-screen-capture', 'expo-sensors',
+        'expo-network', 'expo-device', 'expo-clipboard', 'expo-blur', 'expo-share-intent',
+        '@howincodes/expo-dynamic-app-icon', 'engram-ocr', 'engram-screenshots',
+      ],
     }],
   ],
   experiments: { typedRoutes: true },

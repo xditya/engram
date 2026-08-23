@@ -1,0 +1,116 @@
+const { IOSConfig, withInfoPlist, withXcodeProject } = require('expo/config-plugins');
+const fs = require('fs');
+const path = require('path');
+
+// Patches the iOS share extension that expo-share-extension generates:
+//   - boots React through Expo's factory (the stock template uses RCTReactNativeFactory, which never creates an
+//     Expo AppContext, so expo-modules-core throws "Cannot read property 'EventEmitter' of undefined" on SDK 57);
+//   - resolves the App Group at runtime (ALTAppGroups first: sideloading tools rename it) and never force-unwraps
+//     its container: media copies fall back to the temp dir instead of the template's early returns, which leave
+//     its DispatchGroup waiting forever;
+//   - without a usable container (free-account sideloads) the JS root is never mounted: the payload goes to the
+//     app in the deep link (&p=<base64url JSON>) or, for media, on the same-team named pasteboard (p=pasteboard),
+//     exactly what app/_layout.tsx and EngramDiag.takeSharedPasteboard already read;
+//   - share-sheet label, host scheme (the app declares several; the extension needs one string) and the
+//     deployment target the pods are built for.
+// Mods run last-registered first, so this plugin is listed before expo-share-extension in app.config.ts and
+// sees its output.
+
+const PASTEBOARD = 'app.engram.share';
+const LABEL = 'Save to engram';
+const SCHEME = 'engram';
+
+const HELPERS = `
+  // Sideload support: the group may be renamed (ALTAppGroups) or absent; never assume its container exists.
+  var hostAppGroupIdentifier: String {
+    if let alt = Bundle.main.object(forInfoDictionaryKey: "ALTAppGroups") as? [String], let first = alt.first { return first }
+    return Bundle.main.object(forInfoDictionaryKey: "AppGroup") as? String ?? ""
+  }
+  var groupContainer: URL? { FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: hostAppGroupIdentifier) }
+  var mediaDirectory: URL { groupContainer ?? FileManager.default.temporaryDirectory }
+  // The JS root opens the app's database through the configured group id, so only that container counts; a renamed
+  // group reaches a different directory than the app uses and hands off like a missing one.
+  var canSaveInExtension: Bool {
+    guard let g = Bundle.main.object(forInfoDictionaryKey: "AppGroup") as? String else { return false }
+    return FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: g) != nil
+  }
+  // No usable container: carry the share to the app. URL/text ride in the link; media goes through the pasteboard.
+  func handOff(_ shared: [String: Any]) {
+    var payload = ""
+    let media = ["images", "videos", "files"].flatMap { shared[$0] as? [String] ?? [] }
+    if !media.isEmpty {
+      if let pb = UIPasteboard(name: UIPasteboard.Name("${PASTEBOARD}"), create: true) {
+        pb.items = media.compactMap { p -> [String: Any]? in
+          let url = p.hasPrefix("file:") ? URL(string: p) : URL(fileURLWithPath: p)
+          guard let u = url, let data = try? Data(contentsOf: u) else { return nil }
+          return ["public.data": data, "public.utf8-plain-text": u.lastPathComponent]
+        }
+      }
+      payload = "pasteboard"
+    } else {
+      var json: [String: String] = [:]
+      if let u = shared["url"] as? String { json["webUrl"] = u }
+      if let t = shared["text"] as? String { json["text"] = String(t.prefix(4000)) }
+      guard let d = try? JSONSerialization.data(withJSONObject: json), let s = String(data: d, encoding: .utf8) else { close(); return }
+      payload = s
+    }
+    let p = Data(payload.utf8).base64EncodedString()
+      .replacingOccurrences(of: "+", with: "-").replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "=", with: "")
+    let scheme = Bundle.main.object(forInfoDictionaryKey: "HostAppScheme") as? String ?? "${SCHEME}"
+    if let url = URL(string: "\\(scheme)://dataUrl=share?nonce=\\(Int(Date().timeIntervalSince1970))&p=\\(p)") { openURL(url) }
+    close()
+  }
+`;
+
+// The template's "no group" branches: an early `return` that skips group.leave() (images / videos) or not (file urls).
+const GROUP_GUARD = /guard let appGroup = Bundle\.main\.object\(forInfoDictionaryKey: "AppGroup"\) as\? String else \{\n\s*print\("Could not find AppGroup in info\.plist"\)\n(?:\s*group\.leave\(\)\n)?\s*return\n\s*\}\n\s*\n\s*guard let containerUrl = FileManager\.default\.containerURL\(forSecurityApplicationGroupIdentifier: appGroup\) else \{\n\s*print\("Could not set up file manager container URL for app group"\)\n(?:\s*group\.leave\(\)\n)?\s*return\n\s*\}/g;
+
+function rewrite(src) {
+  let s = src;
+  const must = (re, replacement, label, times = 1) => {
+    const n = (s.match(new RegExp(re.source, re.flags.replace('g', '') + 'g')) ?? []).length;
+    if (n !== times) throw new Error(`[withShareExtension] pattern "${label}" matched ${n} times, expected ${times}`);
+    s = s.replace(re, replacement);
+  };
+  must(/^import React\n/m, 'import React\nimport Expo\n', 'imports');
+  must(/class ReactNativeDelegate: RCTDefaultReactNativeFactoryDelegate \{/, 'class ReactNativeDelegate: ExpoReactNativeFactoryDelegate {', 'delegate base');
+  must(/RCTReactNativeFactory\(delegate: reactNativeFactoryDelegate!\)/, 'ExpoReactNativeFactory(delegate: reactNativeFactoryDelegate!)', 'factory');
+  must(/(  private var isCleanedUp = false\n)/, `$1${HELPERS}`, 'helpers');
+  must(/(\n\s*)(reactNativeFactoryDelegate = ReactNativeDelegate\(\))/,
+    (_, ws, line) => `${ws}if !self.canSaveInExtension { self.handOff(sharedData ?? [:]); return }${ws}${line}`, 'hand-off gate');
+  must(GROUP_GUARD, 'let containerUrl = self.mediaDirectory', 'group guards', 3);
+  return s;
+}
+
+const targetName = (config) => `${IOSConfig.XcodeUtils.sanitizedName(config.name)}ShareExtension`;
+
+module.exports = (config) => {
+  config = withInfoPlist(config, (c) => {
+    const file = path.join(c.modRequest.platformProjectRoot, targetName(c), 'Info.plist');
+    const plist = require('@expo/plist').default;
+    const info = plist.parse(fs.readFileSync(file, 'utf8'));
+    info.CFBundleDisplayName = LABEL;
+    info.HostAppScheme = SCHEME;
+    fs.writeFileSync(file, plist.build(info));
+    return c;
+  });
+  return withXcodeProject(config, (c) => {
+    const name = targetName(c);
+    const file = path.join(c.modRequest.platformProjectRoot, name, 'ShareExtensionViewController.swift');
+    fs.writeFileSync(file, rewrite(fs.readFileSync(file, 'utf8')));
+    // The pods are built for the app's deployment target (expo-build-properties); the extension must match.
+    const deploymentTarget = (config.plugins ?? []).map((p) => (Array.isArray(p) ? p : [p])).find(([n]) => n === 'expo-build-properties')?.[1]?.ios?.deploymentTarget;
+    if (deploymentTarget) {
+      const configs = c.modResults.hash.project.objects.XCBuildConfiguration;
+      for (const key of Object.keys(configs)) {
+        const bs = configs[key].buildSettings;
+        if (bs && bs.PRODUCT_NAME === `"${name}"`) bs.IPHONEOS_DEPLOYMENT_TARGET = `"${deploymentTarget}"`;
+      }
+    }
+    return c;
+  });
+};
+
+module.exports.rewrite = rewrite;
+module.exports.PASTEBOARD = PASTEBOARD;
+module.exports.LABEL = LABEL;

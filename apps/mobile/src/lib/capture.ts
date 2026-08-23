@@ -13,7 +13,7 @@ const firstLine = (s: string) => s.trim().split('\n')[0]!.slice(0, 80);
 
 // Every capture path: create the item, enqueue its jobs, kick the queue. Never fetches, so the share sheet
 // dismisses instantly; extract/thumb/classify run in the background.
-export function createCapture(ctx: Pick<JobCtx, 'platform' | 'db'> & { queue: Queue; sql: Database; drain: () => Promise<void> }) {
+export function createCapture(ctx: Pick<JobCtx, 'platform' | 'db'> & { queue: Pick<Queue, 'enqueueFor'>; sql: Database; drain: () => Promise<void> }) {
   const { db, queue } = ctx;
   const finish = (item: Item, kinds: JobKind[], tags?: string[]) => {
     if (tags?.length) db.tags.set(item.id, tags);

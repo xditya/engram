@@ -2,7 +2,7 @@ import { ScrollView, View, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import * as WebBrowser from 'expo-web-browser';
 import type { FileRole, Item } from '@engram/core';
-import { engram, useLiveQuery } from '../../lib/engram';
+import { engram, useLiveQuery } from '../../lib/hub';
 import { useTheme } from '../../theme/useTheme';
 import { Button, Text } from '../../ui';
 import { metaOf, readingMinutes } from './format';

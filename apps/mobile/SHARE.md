@@ -1,10 +1,9 @@
 # Share path
 
-Both platforms use `expo-share-intent` (configured in `app.config.ts`). There is no custom Swift
-share target: the stock extension stores the payload in the App Group (`group.app.engram`) and opens the
-main app, which reads it with `useShareIntent()` in `app/_layout.tsx` and saves through
-`src/features/share/pendingCapture.ts` → `engram.capture.*`. Nothing on this path fetches the network;
-`extract` / `thumb` / `classify` / `embed` run from the job queue after the sheet dismisses (`engram.drain()`).
+Both platforms show the same Save Moment (`src/features/share/ShareOverlay.tsx`, behaviour in the design's
+`SAVE_MOMENT.md`) over the sharing app and save through `engram.capture.fromShareIntent`. Android gets there with
+`expo-share-intent` (Android only, `disableIOS`), iOS with `expo-share-extension`. Nothing on this path fetches the
+network; `extract` / `thumb` / `classify` / `embed` run from the app's job queue (`engram.drain()`).
 
 Payload → capture mapping (`savePendingCapture`):
 
@@ -38,9 +37,37 @@ the app from Metro once, then share. Release builds have no launcher.
 
 ## iOS
 
-Unchanged: the stock expo-share-intent extension opens the main app, and `app/_layout.tsx` shows the
-`ShareSheet` modal. The Android overlay (stay over the source app, animate, edit tags) needs
-expo-share-extension's custom view running inside the extension process; not attempted here.
+`expo-share-extension` generates the only share target (`PlugIns/engramShareExtension.appex`, bundle id
+`app.engram.ShareExtension`, label `Save to engram`, App Group `group.app.engram`; activation rules in `app.config.ts`:
+1 url, text, 10 images, 1 movie, 10 files). `plugins/withShareExtension.js` (listed before it, because mods run
+last-registered first) patches what it generates; `node plugins/check.js` runs the Swift rewrite against the
+package's template. The extension has two modes, decided in Swift before any JavaScript loads:
+
+**App Group available** (properly signed builds): the extension boots its own React root, `index.share.js` →
+`src/features/share/ShareExtensionRoot.tsx`, through Expo's `ExpoReactNativeFactory` (the stock template uses
+`RCTReactNativeFactory`, which never creates an Expo `AppContext`, so `expo-modules-core` throws at module
+evaluation on SDK 57). The root boots `src/lib/engramLite.ts`: op-sqlite on the App Group database, the file store,
+`createCapture`, and nothing that ticks (no queue worker, no sync engine, no models). The save writes `items` +
+`jobs` + op-log rows exactly as the app would, with the app's device id (mirrored by `createEngram` into
+`<container>/device-id`), so the app enriches the card on its next foreground and sync stays consistent. Tags and
+Space toggles read and write the same database. *Done* / tap outside / 7 s idle call `close()`; tapping the card
+calls `openHostApp('card/<id>')`; the host app is never opened otherwise. `excludedPackages` keeps the expo modules
+the overlay does not import (dev client, camera, media library, background tasks, OCR, ...) out of the extension
+target; community pods (executorch, op-sqlite, reanimated) are linked by `use_native_modules!` regardless, which
+costs binary size, not launch memory. RN `Text` mis-scales with Dynamic Type inside extensions, so the root turns
+`allowFontScaling` off through `ui/Text.tsx`'s `textDefaults`.
+
+**No App Group** (free-account sideloads, or a group renamed by AltStore/SideStore and listed under `ALTAppGroups`):
+the JS root is never mounted. The rewritten Swift hands the share to the app the way the previous extension did:
+url/text ride in the deep link (`engram://dataUrl=share?nonce=…&p=<base64url JSON>`), media is copied to the
+temp directory (the template's container lookup is never force-unwrapped and its early returns, which left the
+DispatchGroup waiting forever, are gone) and parked on the named pasteboard `app.engram.share`
+(`p=pasteboard`), then the app opens. `app/_layout.tsx` reads `p` and `EngramDiag.takeSharedPasteboard()` drains
+the pasteboard, unchanged. A renamed group hands off too: the JS hub opens the database through the configured id,
+and the app itself (`dataDir()`) only uses that id.
+
+`expo-share-intent`'s iOS native module still compiles into the app (pnpm patch kept); nothing imports it on iOS.
+Dev builds: Expo maps the virtual Metro entry to `index.bundle`, which `expo-share-extension/metro` rewrites to `index.share.bundle` for extension requests, so the extension never loads `index.js` or the router.
 
 ## Screenshots
 
@@ -107,12 +134,8 @@ to the share extension:
    Safari then hands the extension an item of type `public.property-list` (`kUTTypePropertyList`) whose
    `NSExtensionJavaScriptPreprocessingResultsKey` dictionary carries the values above.
 
-3. `expo-share-intent` does not read that item type. Two ways to wire it:
-   - Fork / patch its `ShareExtensionViewController.swift` to store the dictionary next to the url in the
-     App Group `UserDefaults`, and surface it through `meta` (`meta.html`, `meta.selection`).
-   - Or switch to `expo-share-extension` (custom Swift target under `apps/mobile/targets/share`) that writes
-     the html to `<group container>/files/<hash>` and an `items` + `jobs(extract)` row directly into the App
-     Group SQLite; the app then picks it up with `engram.drain()` on foreground.
+3. `expo-share-extension` does this with its `preprocessingFile` option (which also sets the WebPage rule and
+   delivers the dictionary as the `preprocessingResults` initial prop); `ShareExtensionRoot` would pass it on.
 
 4. App side: `savePendingCapture` passes `meta.html` as `capture.saveUrl(url, { html })`, which stores it as
    the `reader_html` file so `extract` parses the real DOM instead of refetching. A non-empty `selection`
@@ -123,14 +146,14 @@ images inside the HTML are not inlined.
 
 ## iOS: engram missing from the share sheet after sideloading
 
-The share sheet entry is an app extension (`PlugIns/engram.appex`) with its own bundle id and the
+The share sheet entry is an app extension (`PlugIns/engramShareExtension.appex`) with its own bundle id and the
 `group.app.engram` App Group. Two things remove it:
 
 1. **The sideloading tool strips it.** With a free Apple ID, AltStore and Sideloadly offer (or default to)
    "remove app extensions" because each extension needs its own App ID against the 10-per-week limit and
    App Groups need a paid account. Keep the extension when asked; it needs a paid Apple Developer account
-   to sign with the App Group entitlement. Without that, the main app installs but nothing appears in
-   the share sheet. TestFlight/EAS with a paid account is the clean path.
+   to sign with the App Group entitlement. Without the group the extension still works (hand-off mode above);
+   without the extension nothing appears in the share sheet. TestFlight/EAS with a paid account is the clean path.
 2. **The archive never contained it.** The CI job now fails if the `.appex` is absent from the archive,
    so a green iOS build means the extension is in the IPA.
 

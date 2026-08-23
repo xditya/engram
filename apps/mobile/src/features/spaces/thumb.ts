@@ -1,5 +1,5 @@
 import type { FileRow, Item } from '@engram/core';
-import type { Engram } from '../../lib/engram';
+import type { Engram } from '../../lib/hub';
 
 // Same pick order as the Library: generated thumb, poster, else an image original.
 export function thumbOf(e: Engram, item: Item): { uri: string; row: FileRow } | null {

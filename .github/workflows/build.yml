@@ -124,20 +124,31 @@ jobs:
             archive
 
       - name: Check the share extension is embedded
-        # The share sheet entry lives in PlugIns/<name>.appex. If the archive lacks it,
-        # the IPA installs fine but engram never appears in the share sheet.
+        # The share sheet entry lives in PlugIns/<name>.appex. Exactly one: expo-share-intent is Android-only
+        # (disableIOS) and expo-share-extension provides the iOS target. Its display name is the share-sheet label.
         working-directory: ${{ env.APP_DIR }}
         run: |
           APP=$(ls -d build/unsigned.xcarchive/Products/Applications/*.app | head -n 1)
           ls -la "$APP/PlugIns" || { echo "::error::No PlugIns/ in the app bundle — share extension missing"; exit 1; }
-          ls "$APP"/PlugIns/*.appex >/dev/null 2>&1 || { echo "::error::No .appex in PlugIns/"; exit 1; }
-          plutil -p "$APP"/PlugIns/*.appex/Info.plist | grep -A12 NSExtensionAttributes || true
+          N=$(ls -d "$APP"/PlugIns/*.appex 2>/dev/null | wc -l | tr -d ' ')
+          [ "$N" = "1" ] || { echo "::error::Expected exactly one .appex in PlugIns/, found $N"; exit 1; }
+          APPEX=$(ls -d "$APP"/PlugIns/*.appex)
+          NAME=$(plutil -extract CFBundleDisplayName raw -o - "$APPEX/Info.plist")
+          [ "$NAME" = "Save to engram" ] || { echo "::error::Share extension display name is '$NAME', expected 'Save to engram'"; exit 1; }
+          [ -f "$APPEX/main.jsbundle" ] || { echo "::error::Share extension has no JS bundle (index.share.js was not bundled)"; exit 1; }
+          echo "Activation rules:"
+          plutil -p "$APPEX/Info.plist" | grep -A12 NSExtensionAttributes
 
-      - name: Check the sideload app-group fallback is compiled in
+      - name: Check the Swift rewrite (Expo factory + sideload hand-off) is compiled in
         working-directory: ${{ env.APP_DIR }}
         run: |
-          grep -l pasteboardHandoff ios/*/ShareViewController.swift || { echo "::error::share extension was not rewritten for sideloaded installs"; exit 1; }
-          grep -q ALTAppGroups ../../node_modules/expo-share-intent/ios/ExpoShareIntentModule.swift || { echo "::error::expo-share-intent patch not applied"; exit 1; }
+          node plugins/check.js
+          SWIFT=$(ls ios/*ShareExtension/ShareExtensionViewController.swift)
+          for m in "import Expo" "ExpoReactNativeFactory(delegate:" "ALTAppGroups" "func handOff(" "app.engram.share"; do
+            grep -q -- "$m" "$SWIFT" || { echo "::error::share extension was not rewritten: missing '$m'"; exit 1; }
+          done
+          if grep -q "Could not find AppGroup in info.plist" "$SWIFT"; then echo "::error::an early-return group guard survived the rewrite"; exit 1; fi
+          grep -q '<string>engram</string>' ios/*ShareExtension/Info.plist || { echo "::error::HostAppScheme is not the single 'engram' scheme"; exit 1; }
 
       - name: Package into .ipa
         working-directory: ${{ env.APP_DIR }}

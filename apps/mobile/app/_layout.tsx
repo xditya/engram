@@ -1,7 +1,7 @@
 import '../src/polyfills';
 import { useCallback, useEffect, useState } from 'react';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
-import { Modal, Platform as RN, Pressable, View } from 'react-native';
+import { Modal, Pressable, View } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import * as Linking from 'expo-linking';
 import * as SplashScreen from 'expo-splash-screen';
@@ -23,39 +23,24 @@ import '../src/features/settings/appearance';
 
 SplashScreen.preventAutoHideAsync();
 
-// expo-share-intent touches its native module on import; web export has none. On Android the share intent
-// never reaches this tree: the translucent ShareActivity mounts src/features/share/ShareRoot instead.
-type ShareHook = () => { hasShareIntent: boolean; shareIntent: ShareIntentLike; resetShareIntent: () => void; error?: string | null };
-const useShareIntent: ShareHook = RN.OS !== 'ios'
-  ? () => ({ hasShareIntent: false, shareIntent: {}, resetShareIntent: () => {} })
-  : (require('expo-share-intent') as typeof import('expo-share-intent')).useShareIntent;
-
-// Share sheet / share intent and engram://save?url=… both land here: save, go home, say "Saved".
+// Shares never reach this tree on either platform: Android's ShareActivity and the iOS share extension each
+// mount src/features/share with their own root. Only the iOS no-App-Group hand-off (&p=) lands here.
+// engram://save?url=… lands here too: save, go home, say "Saved".
 function useCaptureIntents() {
   const { engram } = useEngram();
   const router = useRouter();
   const show = useToast((s) => s.show);
-  const { hasShareIntent, shareIntent, resetShareIntent, error: shareError } = useShareIntent();
   const url = Linking.useURL();
   const log = useShareLog((s) => s.add);
-  useEffect(() => { if (shareError) log('error', shareError); }, [shareError, log]);
   useEffect(() => { if (url) log('link', url); }, [url, log]);
 
   const [intent, setIntent] = useState<ShareIntentLike | null>(null);
   const saved = useSavedToast();
 
   useEffect(() => {
-    if (!engram || !hasShareIntent) return;
-    if (intent) { resetShareIntent(); return; } // already handled from the link payload
-    log('share', JSON.stringify({ webUrl: shareIntent.webUrl, text: shareIntent.text?.slice(0, 120), files: shareIntent.files?.map((f) => f.path) }));
-    resetShareIntent();
-    setIntent(shareIntent);
-  }, [engram, hasShareIntent]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
     if (!engram || !url) return;
     // Share extension hand-off without a usable App Group: the payload rides in the link (&p=), or media
-    // sits on the same-team pasteboard (p=pasteboard). When the group works, useShareIntent handles it instead.
+    // sits on the same-team pasteboard (p=pasteboard). With a group, the extension saves by itself.
     const p = /[?&]p=([A-Za-z0-9_-]+)/.exec(url)?.[1];
     if (p && /dataUrl=/.test(url)) {
       try {
