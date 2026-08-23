@@ -29,7 +29,7 @@ export function ItemGrid({ entries, header }: { entries: Entry[]; header?: React
   const cols = dense ? 3 : 2;
   const gutter = dense ? 4 : 8;
   const colW = Math.floor((width - PAD * 2 - gutter * (cols - 1)) / cols);
-  const open = (id: string) => { engram().db.items.opened(id); router.push(`/card/${id}`); };
+  const open = (id: string) => router.push(`/card/${id}`); // the detail screen records the open
   return (
     <FlashList
       key={`${grid ? 'g' : 'l'}${cols}`}

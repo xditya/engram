@@ -43,7 +43,7 @@ export function LibraryScreen() {
   const colW = Math.floor((width - PAD * 2 - gutter * (cols - 1)) / cols);
   const grid = ui.view === 'grid';
 
-  const open = (id: string) => { engram().db.items.opened(id); router.push(`/card/${id}`); };
+  const open = (id: string) => router.push(`/card/${id}`); // the detail screen records the open
   const toggle = (id: string) => {
     void Haptics.selectionAsync();
     setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
