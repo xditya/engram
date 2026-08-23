@@ -1,10 +1,12 @@
-import { AuthRequest, CodeChallengeMethod, ResponseType, exchangeCodeAsync, makeRedirectUri, refreshAsync } from 'expo-auth-session';
+import { Platform } from 'react-native';
+import { AuthRequest, CodeChallengeMethod, ResponseType, exchangeCodeAsync, refreshAsync } from 'expo-auth-session';
 import type { KeyStore } from '@engram/core';
 import { getSettings } from './settings';
 
-// Google OAuth (PKCE, no client secret) for Drive appDataFolder. The client id comes from Settings > Advanced,
-// else the build-time EXPO_PUBLIC_GOOGLE_CLIENT_ID. Google's iOS/Android client types accept the app's custom
-// scheme as redirect, so one 'engram:/oauthredirect' serves both.
+// Google OAuth (PKCE, no client secret) for Drive appDataFolder. Mobile client ids are public by design; these are
+// the project's own, overridable in Settings > Advanced. Google checks the redirect scheme per client type:
+// the package name on Android, the reversed client id on iOS (both registered in app.config.ts).
+const PROJECT_CLIENT_ID = Platform.select({ ios: '290401707658-8ages5t18uh6v285nlik5afm87j7dpv7.apps.googleusercontent.com', default: '290401707658-hmpjv3dn1vhr1avtl57sljt9mh97cr21.apps.googleusercontent.com' })!;
 const discovery = {
   authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
   tokenEndpoint: 'https://oauth2.googleapis.com/token',
@@ -16,7 +18,12 @@ const KEY = 'google';
 type Tokens = { access: string; refresh?: string; exp: number };
 
 export const googleClientId = (): string =>
-  getSettings().advanced.googleClientId || process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || '';
+  getSettings().advanced.googleClientId || process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || PROJECT_CLIENT_ID;
+
+const redirectFor = (clientId: string) =>
+  Platform.OS === 'ios'
+    ? `com.googleusercontent.apps.${clientId.replace(/\.apps\.googleusercontent\.com$/, '')}:/oauthredirect`
+    : 'app.engram:/oauthredirect';
 
 const read = async (keys: KeyStore): Promise<Tokens | null> => { const s = await keys.get(KEY); return s ? (JSON.parse(s) as Tokens) : null; };
 const store = (keys: KeyStore, t: Tokens) => keys.set(KEY, JSON.stringify(t));
@@ -28,8 +35,7 @@ export const isGoogleSignedIn = async (keys: KeyStore) => !!(await read(keys))?.
 // Opens the browser; resolves once tokens are stored. Throws on cancel or a missing client id.
 export async function signInGoogle(keys: KeyStore): Promise<void> {
   const clientId = googleClientId();
-  if (!clientId) throw new Error('No Google client id. Set one in Settings > Advanced.');
-  const redirectUri = makeRedirectUri({ scheme: 'engram', path: 'oauthredirect' });
+  const redirectUri = redirectFor(clientId);
   const req = new AuthRequest({
     clientId, redirectUri, scopes: [GOOGLE_SCOPE], responseType: ResponseType.Code, usePKCE: true,
     codeChallengeMethod: CodeChallengeMethod.S256, extraParams: { access_type: 'offline', prompt: 'consent' },

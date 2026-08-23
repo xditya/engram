@@ -8,7 +8,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: 'engram',
   slug: 'engram',
-  scheme: 'engram',
+  // 'app.engram' and the reversed Google client id are the OAuth redirect schemes Google requires on Android / iOS.
+  scheme: ['engram', 'app.engram', 'com.googleusercontent.apps.290401707658-8ages5t18uh6v285nlik5afm87j7dpv7'],
   version: '0.0.0',
   orientation: 'portrait',
   icon: './assets/icon.png',
