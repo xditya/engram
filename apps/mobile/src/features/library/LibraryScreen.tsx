@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
-import { Pressable, View, useWindowDimensions } from 'react-native';
+import { Pressable, View, useWindowDimensions, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
+import Animated, { FadeInUp, FadeOutUp } from 'react-native-reanimated';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -28,7 +29,18 @@ export function LibraryScreen() {
   const patch = useSettings((s) => s.patch);
   const show = useToast((s) => s.show);
   const [sort, setSort] = useSortSetting();
-  const { entries, pinned, count, more } = useLibrary(ui.view === 'list' ? sort : 'saved');
+  const { entries, pinned, count, more } = useLibrary(sort);
+  // Sort chips stay out of the way: hidden at the top, revealed when the user scrolls back up, hidden again on scroll down.
+  const [showSort, setShowSort] = useState(false);
+  const lastY = useRef(0);
+  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const y = e.nativeEvent.contentOffset.y;
+    const dy = y - lastY.current;
+    lastY.current = y;
+    if (y < 40) { if (showSort) setShowSort(false); return; }
+    if (dy < -6 && !showSort) setShowSort(true);
+    else if (dy > 6 && showSort) setShowSort(false);
+  };
   const paste = usePasteChip();
   const nudge = useIntelligenceNudge();
   const tip = useShareTip();
@@ -71,13 +83,14 @@ export function LibraryScreen() {
       ) : null}
       <ResurfaceRow count={count} onPress={() => router.push('/resurface')} />
       <PinnedStrip pinned={pinned} onPress={open} />
-      {grid ? null : (
-        <View style={{ flexDirection: 'row', gap: space[2], paddingHorizontal: space[4], paddingBottom: space[3] }}>
-          {SORTS.map(([k, label]) => <Chip key={k} label={label} active={sort === k} onPress={() => setSort(k)} />)}
-        </View>
-      )}
     </View>
   );
+
+  const sortBar = showSort ? (
+    <Animated.View entering={FadeInUp.duration(200)} exiting={FadeOutUp.duration(160)} style={{ flexDirection: 'row', gap: space[2], paddingHorizontal: space[4], paddingVertical: space[2], backgroundColor: c.bg }}>
+      {SORTS.map(([k, label]) => <Chip key={k} label={label} active={sort === k} onPress={() => setSort(k)} />)}
+    </Animated.View>
+  ) : null;
 
   const empty = error ? (
     <View style={{ alignItems: 'center', paddingTop: 120, paddingHorizontal: space[6], gap: space[4] }}>
@@ -119,6 +132,7 @@ export function LibraryScreen() {
         )}
       </View>
 
+      {sortBar}
       <FlashList
         ref={list}
         key={`${grid ? 'g' : 'l'}${cols}`}
@@ -132,6 +146,8 @@ export function LibraryScreen() {
         onEndReached={more}
         onEndReachedThreshold={1}
         onScrollBeginDrag={paste.dismiss}
+        onScroll={onScroll}
+        scrollEventThrottle={32}
         contentContainerStyle={grid
           ? { paddingHorizontal: PAD - gutter / 2, paddingBottom: 140 }
           : { paddingHorizontal: PAD, paddingBottom: 140 }}
