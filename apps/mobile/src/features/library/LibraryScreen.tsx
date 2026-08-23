@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { Pressable, View, useWindowDimensions, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
-import Animated, { FadeInUp, FadeOutUp } from 'react-native-reanimated';
+import Animated, { Easing, FadeInUp, FadeOutUp, interpolate, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -36,12 +36,27 @@ export function LibraryScreen() {
   const size = useRef({ content: 0, frame: 0 });
   const measure = () => setFits(size.current.frame > 0 && size.current.content <= size.current.frame);
   const lastY = useRef(0);
+  const folded = useRef(false);
+  const collapse = useSharedValue(0); // 0 = search field open, 1 = folded into the + button
+  const fold = (v: boolean) => { folded.current = v; collapse.value = withTiming(v ? 1 : 0, { duration: 240, easing: Easing.out(Easing.cubic) }); };
+  const { width: winW } = useWindowDimensions();
+  const searchW = winW - space[4] * 2 - 56 - space[3];
+  const searchStyle = useAnimatedStyle(() => ({
+    width: interpolate(collapse.value, [0, 1], [searchW, 0]),
+    opacity: interpolate(collapse.value, [0, 0.6, 1], [1, 0, 0]),
+    transform: [{ translateX: interpolate(collapse.value, [0, 1], [0, 24]) }],
+  }));
+  const plusStyle = useAnimatedStyle(() => ({ opacity: interpolate(collapse.value, [0, 0.5], [1, 0]), transform: [{ rotate: `${interpolate(collapse.value, [0, 1], [0, 90])}deg` }] }));
+  const markStyle = useAnimatedStyle(() => ({ opacity: interpolate(collapse.value, [0.5, 1], [0, 1]), transform: [{ scale: interpolate(collapse.value, [0.5, 1], [0.6, 1]) }] }));
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const y = e.nativeEvent.contentOffset.y;
     const dy = y - lastY.current;
     lastY.current = y;
     // Revealed by the first scroll back up; it then stays for the session.
     if (!showSort && y > 40 && dy < -8) setShowSort(true);
+    // The search field folds into the + button on scroll down and comes back on scroll up.
+    if (dy > 8 && y > 80 && !folded.current) fold(true);
+    else if (dy < -8 && folded.current) fold(false);
   };
   const paste = usePasteChip();
   const nudge = useIntelligenceNudge();
@@ -197,21 +212,28 @@ export function LibraryScreen() {
               </Pressable>
             </View>
           ) : null}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[3] }}>
-            <Pressable
-              accessibilityRole="search"
-              onPress={() => router.push('/search')}
-              style={{ flex: 1, height: 46, borderRadius: 12, backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, justifyContent: 'center', paddingHorizontal: space[4] }}
-            >
-              <Text size="md" color="text3">Search</Text>
-            </Pressable>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: space[3] }}>
+            <Animated.View style={[{ height: 46, overflow: 'hidden' }, searchStyle]}>
+              <Pressable
+                accessibilityRole="search"
+                onPress={() => router.push('/search')}
+                style={{ width: searchW, height: 46, borderRadius: 12, backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, justifyContent: 'center', paddingHorizontal: space[4] }}
+              >
+                <Text size="md" color="text3">Search</Text>
+              </Pressable>
+            </Animated.View>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Add"
-              onPress={() => router.push('/capture')}
+              accessibilityLabel={folded.current ? 'Search or add' : 'Add'}
+              onPress={() => { if (folded.current) fold(false); else router.push('/capture'); }}
               style={({ pressed }) => ({ width: 56, height: 56, borderRadius: radius.lg, backgroundColor: c.accent, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.85 : 1 })}
             >
-              <Text style={{ fontSize: 28, lineHeight: 32, color: dark ? c.bg : '#FFFFFF' }}>+</Text>
+              <Animated.View style={[{ position: 'absolute' }, plusStyle]}>
+                <Text style={{ fontSize: 28, lineHeight: 32, color: dark ? c.bg : '#FFFFFF' }}>+</Text>
+              </Animated.View>
+              <Animated.View style={[{ position: 'absolute' }, markStyle]}>
+                <Trace size={26} color={dark ? c.bg : '#FFFFFF'} />
+              </Animated.View>
             </Pressable>
           </View>
         </View>
