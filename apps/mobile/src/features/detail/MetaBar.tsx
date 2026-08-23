@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import Animated, { Easing, FadeIn, FadeOut, ReduceMotion, useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Item } from '@engram/core';
 import { Trace } from '../../icons/Icon';
@@ -15,28 +15,40 @@ const MAX_PINNED = 5;
 
 const APressable = Animated.createAnimatedComponent(Pressable);
 
-// Tags that land later (autotag / classify jobs) fade in like any new save.
-function TagChip({ label, onPress, dashed, accessibilityLabel }: { label: string; onPress: () => void; dashed?: boolean; accessibilityLabel?: string }) {
+const EASE = Easing.bezier(0.33, 1, 0.68, 1);
+
+// Tags that land later (autotag / classify jobs) fade in like any new save: 200 ms, opacity + 4 pt lift,
+// staggered >= 120 ms apart when several arrive in one batch. Reduced motion keeps the fade, drops the lift.
+function TagChip({ label, onPress, dashed, accessibilityLabel, delay = 0 }: { label: string; onPress: () => void; dashed?: boolean; accessibilityLabel?: string; delay?: number }) {
   const { c, motion } = useTheme();
+  const reduced = useReducedMotion();
+  const entering = FadeIn.duration(motion.base).delay(delay).easing(EASE).reduceMotion(ReduceMotion.Never)
+    .withInitialValues((reduced ? { opacity: 0 } : { opacity: 0, transform: [{ translateY: 4 }] }) as { opacity: number }); // the builder's type omits transform; the runtime merges any style
   return (
-    <APressable entering={FadeIn.duration(motion.base)} accessibilityRole="button" accessibilityLabel={accessibilityLabel} onPress={onPress} hitSlop={6}
+    <APressable entering={entering} accessibilityRole="button" accessibilityLabel={accessibilityLabel} onPress={onPress} hitSlop={6}
       style={{ height: 32, paddingHorizontal: 12, borderRadius: 7, justifyContent: 'center', borderWidth: 1, borderColor: c.line, borderStyle: dashed ? 'dashed' : 'solid' }}>
       <Text size="xs" color={dashed ? 'text2' : 'text'}>{label}</Text>
     </APressable>
   );
 }
 
-export function Tags({ item, tags }: { item: Item; tags: string[] }) {
+// `pending` shows a static "tagging…" until the first chip lands; `compact` drops the vertical padding.
+export function Tags({ item, tags, pending, compact }: { item: Item; tags: string[]; pending?: boolean; compact?: boolean }) {
   const { c, space } = useTheme();
   const [draft, setDraft] = useState<string | null>(null);
+  const seen = useRef(new Set(tags));
+  const fresh = tags.filter((t) => !seen.current.has(t));
+  useEffect(() => { seen.current = new Set(tags); });
   const all = useLiveQuery((e) => e.db.tags.all().map((t) => t.tag), []) ?? [];
   const q = (draft ?? '').trim().toLowerCase();
   const hints = q ? all.filter((t) => t.toLowerCase().startsWith(q) && !tags.includes(t)).slice(0, 6) : [];
   const add = (t: string) => { const v = t.trim(); if (v) engram().db.tags.add(item.id, v); setDraft(null); };
   return (
-    <View style={{ paddingVertical: space[3], gap: space[2] }}>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space[2], alignItems: 'center' }}>
-        {tags.map((t) => <TagChip key={t} label={t} accessibilityLabel={`Remove tag ${t}`} onPress={() => engram().db.tags.remove(item.id, t)} />)}
+    <View style={{ paddingVertical: compact ? 0 : space[3], gap: space[2] }}>
+      <View accessibilityLiveRegion="polite" accessibilityLabel={tags.length ? `${tags.length} ${tags.length === 1 ? 'tag' : 'tags'}: ${tags.join(', ')}` : undefined}
+        style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space[2], alignItems: 'center' }}>
+        {tags.map((t) => <TagChip key={t} label={t} delay={Math.max(0, fresh.indexOf(t)) * 120} accessibilityLabel={`Remove tag ${t}`} onPress={() => engram().db.tags.remove(item.id, t)} />)}
+        {pending && !tags.length ? <Animated.View exiting={FadeOut.duration(120)}><Text size="xs" mono color="text3">tagging…</Text></Animated.View> : null}
         {draft === null ? (
           <TagChip label="+ tag" dashed accessibilityLabel="Add tag" onPress={() => setDraft('')} />
         ) : (

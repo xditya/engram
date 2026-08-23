@@ -7,7 +7,7 @@ import { useTheme } from '../theme/useTheme';
 const ease = Easing.out(Easing.cubic);
 
 // Edge-to-edge windows don't shrink for the keyboard, so the sheet lifts itself by its height.
-function useKeyboardHeight() {
+export function useKeyboardHeight() {
   const [h, setH] = useState(0);
   useEffect(() => {
     const show = Keyboard.addListener('keyboardDidShow', (e) => setH(e.endCoordinates.height));

@@ -7,7 +7,7 @@ export interface ButtonProps {
   onPress?: () => void;
   variant?: 'filled' | 'outline' | 'text'; // one filled (accent) button per screen
   danger?: boolean;
-  height?: 48 | 52;
+  height?: 44 | 48 | 52;
   disabled?: boolean;
   style?: ViewStyle;
 }
@@ -36,7 +36,7 @@ export function Button({ title, onPress, variant = 'filled', danger, height = 48
         style,
       ]}
     >
-      <Text size="md" weight={500} style={{ color: labelColor }}>
+      <Text size={height === 44 ? 'sm' : 'md'} weight={500} style={{ color: labelColor }}>
         {title}
       </Text>
     </Pressable>
