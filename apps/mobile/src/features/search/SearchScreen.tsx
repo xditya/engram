@@ -94,7 +94,7 @@ export function SearchScreen() {
       </View>
 
       {suggestions.length ? (
-        <ScrollView horizontal keyboardShouldPersistTaps="always" showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: space[4], gap: space[2], paddingBottom: space[3] }}>
+        <ScrollView horizontal keyboardShouldPersistTaps="always" showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ paddingHorizontal: space[4], gap: space[2], paddingBottom: space[3], alignItems: 'flex-start' }}>
           {suggestions.map((s) => <OpChip key={s} label={s} onPress={() => onChange(s.endsWith(':') ? s : `${s} `)} />)}
         </ScrollView>
       ) : null}
