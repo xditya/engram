@@ -1,7 +1,7 @@
 import { Platform as RN } from 'react-native';
 import { File } from 'expo-file-system';
 import {
-  ai, crypto, extract, media, type EngramDb, type FileRole, type JobKind, type OnDeviceAI, type Platform, type Queue,
+  ai, crypto, db as coreDb, extract, media, type EngramDb, type FileRole, type JobKind, type OnDeviceAI, type Platform, type Queue,
 } from '@engram/core';
 import { readRgba } from '@engram/db-rn';
 import { getSettings, useSettings } from './settings';
@@ -41,6 +41,12 @@ export function createJobs(ctx: JobCtx): Queue {
   const provider = () => ai.createProvider(getSettings().intelligence, { apiKey: secrets.get('apiKey') ?? undefined }, { fetch, onDevice: onDevice() });
   const month = () => new Date().toISOString().slice(0, 7);
 
+  // A tag the user removed from this card stays removed on re-tagging.
+  const addTags = (id: string, tags: string[], source: 'ai' | 'user' | 'import') => {
+    const gone = new Set(platform.db.query<{ tag: string }>('SELECT tag FROM tags WHERE item_id = ? AND deleted_at IS NOT NULL', [id]).map((r) => r.tag));
+    for (const t of tags) if (!gone.has(t)) db.tags.add(id, t, source);
+  };
+
   const handlers: Partial<Record<JobKind, (itemId: string) => Promise<void>>> = {
     // Enrich a link from its page (the shared reader_html if the share sheet captured one, else a fetch).
     async extract(itemId) {
@@ -58,9 +64,18 @@ export function createJobs(ctx: JobCtx): Queue {
           await addFile(ctx, itemId, pf.role, got.bytes, pf.mime ?? got.mime);
         } catch { /* a missing og:image never fails the extract */ }
       }
-      const kinds: JobKind[] = ['classify', 'embed'];
+      const kinds: JobKind[] = ['autotag', 'classify', 'embed'];
       if (db.files.of(itemId).some((f) => f.role === 'thumb' || f.role === 'original' || f.role === 'poster')) kinds.unshift('thumb');
       queue.enqueueFor(itemId, kinds);
+    },
+    // Library tags that appear in the card's own text; no model needed, so every save gets tags immediately.
+    async autotag(itemId) {
+      const item = db.items.get(itemId);
+      if (!item) return;
+      const existing = db.tags.all().map((t) => t.tag);
+      const have = new Set(db.tags.of(itemId));
+      const found = coreDb.matchTags(coreDb.autotagText(item), existing).filter((t) => !have.has(t));
+      if (found.length) addTags(itemId, found, 'ai');
     },
     // 800 px JPEG from the original (image), a poster frame (video) or the enricher's full-size image.
     async thumb(itemId) {
@@ -102,11 +117,7 @@ export function createJobs(ctx: JobCtx): Queue {
     platform: { ocr: platform.ocr, files: platform.files },
     writer: {
       update: (id, patch) => db.items.update(id, patch),
-      addTags: (id, tags, source) => {
-        // A tag the user removed from this card stays removed on re-classification.
-        const gone = new Set(platform.db.query<{ tag: string }>('SELECT tag FROM tags WHERE item_id = ? AND deleted_at IS NOT NULL', [id]).map((r) => r.tag));
-        for (const t of tags) if (!gone.has(t)) db.tags.add(id, t, source);
-      },
+      addTags,
       getItem: (id) => db.items.get(id) ?? null,
       filesOf: (id) => db.files.of(id),
     },

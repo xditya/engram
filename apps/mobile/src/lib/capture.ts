@@ -41,13 +41,13 @@ export function createCapture(ctx: Pick<JobCtx, 'platform' | 'db'> & { queue: Qu
     },
     saveNote(text: string, o: Pick<CaptureOpts, 'tags'> = {}): Item {
       const item = db.items.create({ type: 'note', title: firstLine(text), body: text.trim() });
-      return finish(item, ['classify', 'embed'], o.tags);
+      return finish(item, ['autotag', 'classify', 'embed'], o.tags);
     },
     saveQuote(text: string, url?: string, o: Pick<CaptureOpts, 'tags'> = {}): Item {
       const clean = url ? sync.normalizeUrl(url) : null;
       const domain = clean ? domainOf(clean) : null;
       const item = db.items.create({ type: 'quote', url: clean, domain, title: domain ?? firstLine(text), body: text.trim() });
-      return finish(item, clean ? ['extract'] : ['classify', 'embed'], o.tags);
+      return finish(item, clean ? ['extract'] : ['autotag', 'classify', 'embed'], o.tags);
     },
     // Local file uris (image picker, document picker, share sheet). One item per file; bytes copied into the FileStore.
     async saveFiles(uris: string[], o: Pick<CaptureOpts, 'tags'> = {}): Promise<Item[]> {
@@ -58,7 +58,7 @@ export function createCapture(ctx: Pick<JobCtx, 'platform' | 'db'> & { queue: Qu
         const type: ItemType = mime.startsWith('image/') ? 'image' : mime.startsWith('video/') ? 'video' : mime === 'application/pdf' ? 'pdf' : 'file';
         const item = db.items.create({ type, title: f.name, meta: JSON.stringify({ filename: f.name }) });
         await addFile(ctx, item.id, 'original', await f.bytes(), mime);
-        const kinds: JobKind[] = type === 'image' ? ['thumb', 'ocr', 'classify', 'embed'] : type === 'video' ? ['thumb', 'classify', 'embed'] : ['classify', 'embed'];
+        const kinds: JobKind[] = type === 'image' ? ['thumb', 'ocr', 'autotag', 'classify', 'embed'] : type === 'video' ? ['thumb', 'autotag', 'classify', 'embed'] : ['autotag', 'classify', 'embed'];
         out.push(finish(item, kinds, o.tags));
       }
       return out;

@@ -64,7 +64,7 @@ export interface SpaceItem {
   deleted_at: number | null;
 }
 
-export type JobKind = 'extract' | 'colors' | 'ocr' | 'classify' | 'embed' | 'describe_image' | 'thumb';
+export type JobKind = 'extract' | 'colors' | 'ocr' | 'autotag' | 'classify' | 'embed' | 'describe_image' | 'thumb';
 export type JobStatus = 'pending' | 'running' | 'done' | 'failed' | 'skipped';
 
 export interface Job {
