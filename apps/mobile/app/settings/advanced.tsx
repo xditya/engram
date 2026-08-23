@@ -64,6 +64,9 @@ export default function Advanced() {
         <Row title="Re-tag library" subtitle="Runs Intelligence over saves that have no tags yet" onPress={retag} />
         <Row title="Rebuild thumbnails" onPress={rebuildThumbs} />
       </Group>
+      <Group label="Diagnostics">
+        <Row title="Share diagnostics" subtitle="What the share sheet hand-off sees on this device" onPress={() => router.push('/settings/share-diagnostics' as never)} />
+      </Group>
       <Group label="Danger">
         <Row title="Reset engram on this device" onPress={reset} />
       </Group>

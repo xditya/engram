@@ -15,6 +15,7 @@ import { useEngram, useToast, type ShareIntentLike } from '../src/lib/engram';
 import { ShareSheet, useSavedToast } from '../src/features/capture';
 import { listenForScreenshots, saveLatestScreenshot, useScreenshotPrompt } from '../src/lib/screenshots';
 import { useShake } from '../src/lib/useShake';
+import { useShareLog } from '../src/lib/shareLog';
 import * as Haptics from 'expo-haptics';
 import { Text } from '../src/ui';
 import '../src/features/settings/appearance';
@@ -23,7 +24,7 @@ SplashScreen.preventAutoHideAsync();
 
 // expo-share-intent touches its native module on import; web export has none. On Android the share intent
 // never reaches this tree: the translucent ShareActivity mounts src/features/share/ShareRoot instead.
-type ShareHook = () => { hasShareIntent: boolean; shareIntent: ShareIntentLike; resetShareIntent: () => void };
+type ShareHook = () => { hasShareIntent: boolean; shareIntent: ShareIntentLike; resetShareIntent: () => void; error?: string | null };
 const useShareIntent: ShareHook = RN.OS !== 'ios'
   ? () => ({ hasShareIntent: false, shareIntent: {}, resetShareIntent: () => {} })
   : (require('expo-share-intent') as typeof import('expo-share-intent')).useShareIntent;
@@ -33,14 +34,18 @@ function useCaptureIntents() {
   const { engram } = useEngram();
   const router = useRouter();
   const show = useToast((s) => s.show);
-  const { hasShareIntent, shareIntent, resetShareIntent } = useShareIntent();
+  const { hasShareIntent, shareIntent, resetShareIntent, error: shareError } = useShareIntent();
   const url = Linking.useURL();
+  const log = useShareLog((s) => s.add);
+  useEffect(() => { if (shareError) log('error', shareError); }, [shareError, log]);
+  useEffect(() => { if (url) log('link', url); }, [url, log]);
 
   const [intent, setIntent] = useState<ShareIntentLike | null>(null);
   const saved = useSavedToast();
 
   useEffect(() => {
     if (!engram || !hasShareIntent) return;
+    log('share', JSON.stringify({ webUrl: shareIntent.webUrl, text: shareIntent.text?.slice(0, 120), files: shareIntent.files?.map((f) => f.path) }));
     resetShareIntent();
     setIntent(shareIntent);
   }, [engram, hasShareIntent]); // eslint-disable-line react-hooks/exhaustive-deps
