@@ -30,21 +30,18 @@ export function LibraryScreen() {
   const show = useToast((s) => s.show);
   const [sort, setSort] = useSortSetting();
   const { entries, pinned, count, more } = useLibrary(sort);
-  // Sort chips stay out of the way: hidden at the top, revealed when the user scrolls back up, hidden again on scroll down.
+  // Sort chips stay out of the way until the user scrolls back up once; then they stay.
   const [showSort, setShowSort] = useState(false);
   const [fits, setFits] = useState(false); // content shorter than the viewport: nothing to scroll, so the chips just stay
   const size = useRef({ content: 0, frame: 0 });
   const measure = () => setFits(size.current.frame > 0 && size.current.content <= size.current.frame);
   const lastY = useRef(0);
-  const toggledAt = useRef(0);
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const y = e.nativeEvent.contentOffset.y;
     const dy = y - lastY.current;
     lastY.current = y;
-    const now = Date.now();
-    if (now - toggledAt.current < 350) return; // let the bar's own animation settle before reading direction again
-    const want = y < 40 ? false : dy < -8 ? true : dy > 8 ? false : showSort;
-    if (want !== showSort) { toggledAt.current = now; setShowSort(want); }
+    // Revealed by the first scroll back up; it then stays for the session.
+    if (!showSort && y > 40 && dy < -8) setShowSort(true);
   };
   const paste = usePasteChip();
   const nudge = useIntelligenceNudge();
