@@ -19,9 +19,11 @@ export function SpaceSheet({ open, initial, onSave, onClose, onDelete }: {
   const field = { minHeight: 46, paddingHorizontal: space[3], paddingVertical: space[2], borderRadius: radius.md, backgroundColor: c.bg, borderWidth: 1, borderColor: c.line, color: c.text, fontSize: font.size.md } as const;
   return (
     <Sheet open={open} onClose={onClose}>
-      <View style={{ gap: space[3], paddingTop: space[2] }}>
+      <View style={{ gap: space[2], paddingTop: space[2] }}>
         <Text size="lg" weight={500}>{initial ? 'Edit Space' : 'New Space'}</Text>
+        <Text size="xs" color="text3">Name</Text>
         <TextInput value={name} onChangeText={setName} placeholder="Name" placeholderTextColor={c.text3} style={[field, { fontFamily: 'Geist' }]} accessibilityLabel="Space name" autoFocus />
+        <Text size="xs" color="text3">Query</Text>
         <TextInput
           value={query}
           onChangeText={setQuery}

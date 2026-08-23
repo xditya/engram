@@ -28,9 +28,7 @@ export default function SpaceScreen() {
   const iconBtn = { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' } as const;
   const header = data ? (
     <View style={{ paddingHorizontal: view === 'grid' ? 4 : 0, paddingBottom: space[3], gap: space[1] }}>
-      <Pressable accessibilityRole="button" accessibilityLabel="Edit query" onPress={() => setEditing(true)}>
-        <Text size="sm" mono color="text3">{data.space.query?.trim() || 'no query'}</Text>
-      </Pressable>
+      <Text size="sm" mono color="text3">{data.space.query?.trim() || 'no query'}</Text>
       {data.manual ? <Text size="xs" mono color="text3">+ {data.manual} added by hand</Text> : null}
     </View>
   ) : undefined;
@@ -44,6 +42,9 @@ export default function SpaceScreen() {
         <Text weight={600} numberOfLines={1} style={{ fontSize: 17, flex: 1 }}>{data?.space.name ?? ''}</Text>
         <Pressable accessibilityLabel={view === 'grid' ? 'Show as list' : 'Show as grid'} accessibilityRole="button" onPress={() => patch('ui', { view: view === 'grid' ? 'list' : 'grid' })} style={iconBtn}>
           <Icon name={view === 'grid' ? 'view-list' : 'view-grid'} />
+        </Pressable>
+        <Pressable accessibilityLabel="Edit Space" accessibilityRole="button" onPress={() => setEditing(true)} style={iconBtn}>
+          <Text size="lg" color="text2">···</Text>
         </Pressable>
         <Pressable
           accessibilityRole="button"
