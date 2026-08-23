@@ -122,7 +122,7 @@ jobs:
       - name: Check the sideload app-group fallback is compiled in
         working-directory: ${{ env.APP_DIR }}
         run: |
-          grep -l ALTAppGroups ios/*/ShareExtensionViewController.swift || { echo "::error::share extension still hard-codes the app group"; exit 1; }
+          grep -l ALTAppGroups ios/*/ShareViewController.swift || { echo "::error::share extension still hard-codes the app group"; exit 1; }
           grep -q ALTAppGroups ../../node_modules/expo-share-intent/ios/ExpoShareIntentModule.swift || { echo "::error::expo-share-intent patch not applied"; exit 1; }
 
       - name: Package into .ipa

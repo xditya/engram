@@ -9,7 +9,7 @@ module.exports = (config) =>
   withDangerousMod(config, ['ios', (c) => {
     const dir = c.modRequest.platformProjectRoot;
     for (const entry of fs.readdirSync(dir)) {
-      const file = path.join(dir, entry, 'ShareExtensionViewController.swift');
+      const file = path.join(dir, entry, 'ShareViewController.swift');
       if (!fs.existsSync(file)) continue;
       const src = fs.readFileSync(file, 'utf8');
       const out = src.replace(
