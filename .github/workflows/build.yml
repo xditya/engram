@@ -1,0 +1,266 @@
+name: Build App
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Which platform(s) to build
+        type: choice
+        default: both
+        options:
+          - both
+          - ios
+          - android
+      tag:
+        description: Release tag (blank = build-<run number>)
+        type: string
+        default: ""
+      prerelease:
+        description: Mark the release as a pre-release
+        type: boolean
+        default: true
+
+# Needed by the release job to create tags and upload assets.
+permissions:
+  contents: write
+
+# Runs queue instead of pre-empting each other. These are release builds, not
+# push CI: cancelling in progress throws away a half-hour Xcode archive the
+# moment a second build is dispatched.
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  APP_DIR: apps/mobile
+
+jobs:
+  ios:
+    if: ${{ inputs.platform == 'both' || inputs.platform == 'ios' }}
+    runs-on: macos-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Cache CocoaPods downloads
+        # op-sqlite and react-native-executorch pull large prebuilt xcframeworks;
+        # caching the pod download cache saves several minutes per run.
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Caches/CocoaPods
+            ~/.cocoapods/repos
+          key: ${{ runner.os }}-pods-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-pods-
+
+      - name: Generate iOS project (Expo Prebuild)
+        working-directory: ${{ env.APP_DIR }}
+        run: npx expo prebuild --platform ios --clean
+
+      - name: Install CocoaPods
+        working-directory: ${{ env.APP_DIR }}/ios
+        run: pod install
+
+      - name: Resolve Xcode scheme
+        id: scheme
+        working-directory: ${{ env.APP_DIR }}
+        # Expo names the workspace after the app name in app.config.ts
+        # (engram -> engram.xcworkspace). Derive it so a rename doesn't break the build.
+        run: |
+          WORKSPACE=$(ls -d ios/*.xcworkspace | head -n 1)
+          SCHEME=$(basename "$WORKSPACE" .xcworkspace)
+          echo "workspace=$WORKSPACE" >> "$GITHUB_OUTPUT"
+          echo "scheme=$SCHEME" >> "$GITHUB_OUTPUT"
+          echo "Building workspace=$WORKSPACE scheme=$SCHEME"
+
+      - name: Build Unsigned Archive
+        working-directory: ${{ env.APP_DIR }}
+        run: |
+          xcodebuild \
+            -workspace "${{ steps.scheme.outputs.workspace }}" \
+            -scheme "${{ steps.scheme.outputs.scheme }}" \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/unsigned.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGN_ENTITLEMENTS="" \
+            archive
+
+      - name: Package into .ipa
+        working-directory: ${{ env.APP_DIR }}
+        run: |
+          APP=$(ls -d build/unsigned.xcarchive/Products/Applications/*.app | head -n 1)
+          mkdir -p Payload
+          cp -R "$APP" Payload/
+          zip -qr "$GITHUB_WORKSPACE/engram-ios-unsigned.ipa" Payload/
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: engram-ios
+          path: engram-ios-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 14
+
+  android:
+    if: ${{ inputs.platform == 'both' || inputs.platform == 'android' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Cache Gradle
+        # setup-java's built-in `cache: gradle` can't be used here: it hashes
+        # **/*.gradle* at checkout time, but android/ is gitignored and only
+        # exists after prebuild, so it fails with "No file ... matched".
+        # Key off the lockfile instead; that is what determines the deps.
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-gradle-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Android project (Expo Prebuild)
+        # Config plugins run here: the translucent ShareActivity, the OCR and
+        # screenshot-watcher modules, op-sqlite with FTS5.
+        working-directory: ${{ env.APP_DIR }}
+        run: npx expo prebuild --platform android --clean
+
+      - name: Build Release APK
+        # The Expo template signs the release build with the debug keystore, so
+        # this needs no secrets. The APK is sideload-ready, not Play-Store-ready.
+        working-directory: ${{ env.APP_DIR }}/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
+
+      - name: Collect APK
+        run: cp ${{ env.APP_DIR }}/android/app/build/outputs/apk/release/app-release.apk engram-android.apk
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: engram-android
+          path: engram-android.apk
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    # Runs if at least one platform built. `always()` is required so that a
+    # skipped platform (single-platform run) doesn't skip the release too.
+    needs: [ios, android]
+    if: ${{ always() && (needs.ios.result == 'success' || needs.android.result == 'success') }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: engram-*
+          merge-multiple: true
+
+      - name: Resolve release tag
+        id: meta
+        run: |
+          TAG="${{ inputs.tag }}"
+          if [ -z "$TAG" ]; then
+            TAG="build-${{ github.run_number }}"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Write release notes
+        run: |
+          cat > notes.md <<'NOTES'
+          Automated build.
+
+          - **Android** `.apk` is signed with the Expo debug keystore. Fine for
+            sideloading, not accepted by the Play Store.
+          - **iOS** `.ipa` is **unsigned**. Install it with a tool that re-signs on
+            install (AltStore, Sideloadly), or resign it yourself. It will not
+            install by double-clicking.
+
+          These are plain release builds: they carry their own JavaScript bundle
+          and do not need a Metro server.
+          NOTES
+          echo "" >> notes.md
+          echo "Built from commit ${{ github.sha }}." >> notes.md
+
+      - name: Publish GitHub Release
+        env:
+          # Falls back to a PAT when the repo's built-in token is read-only.
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ steps.meta.outputs.tag }}
+          PRERELEASE: ${{ inputs.prerelease }}
+        run: |
+          set -euo pipefail
+          ls -lh dist
+
+          FLAGS=(--title "engram $TAG" --notes-file notes.md --target "$GITHUB_SHA")
+          if [ "$PRERELEASE" = "true" ]; then
+            FLAGS+=(--prerelease)
+          fi
+
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            if ! gh release create "$TAG" "${FLAGS[@]}"; then
+              echo "::error::Could not create release $TAG."
+              echo "If the error above is HTTP 403 'Resource not accessible by integration',"
+              echo "the workflow token is read-only. Fix it in either of these ways:"
+              echo "  1. Settings -> Actions -> General -> Workflow permissions ->"
+              echo "     select 'Read and write permissions' -> Save."
+              echo "  2. Create a PAT with the 'contents' write scope and save it as"
+              echo "     the repository secret RELEASE_TOKEN."
+              exit 1
+            fi
+          fi
+
+          gh release upload "$TAG" dist/* --clobber
+          echo "Published $(gh release view "$TAG" --json url --jq .url)"
