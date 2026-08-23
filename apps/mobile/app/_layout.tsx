@@ -72,11 +72,18 @@ function useCaptureIntents() {
 function Toast() {
   const { c, space } = useTheme();
   const message = useToast((s) => s.message);
+  const action = useToast((s) => s.action);
+  const hide = useToast((s) => s.hide);
   if (!message) return null;
   return (
-    <Animated.View entering={FadeIn.duration(120)} exiting={FadeOut.duration(200)} pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, bottom: 148, alignItems: 'center' }}>
-      <View accessibilityLiveRegion="polite" style={{ minHeight: 44, paddingHorizontal: space[5], borderRadius: 22, backgroundColor: c.text, justifyContent: 'center', maxWidth: '86%' }}>
-        <Text size="sm" weight={500} numberOfLines={2} style={{ color: c.bg, fontSize: 15 }}>{message}</Text>
+    <Animated.View entering={FadeIn.duration(120)} exiting={FadeOut.duration(200)} pointerEvents={action ? 'box-none' : 'none'} style={{ position: 'absolute', left: 0, right: 0, bottom: 148, alignItems: 'center' }}>
+      <View accessibilityLiveRegion="polite" style={{ minHeight: 44, paddingLeft: space[5], paddingRight: action ? space[2] : space[5], borderRadius: 22, backgroundColor: c.text, flexDirection: 'row', alignItems: 'center', gap: space[3], maxWidth: '86%' }}>
+        <Text size="sm" weight={500} numberOfLines={2} style={{ color: c.bg, fontSize: 15, flexShrink: 1 }}>{message}</Text>
+        {action ? (
+          <Pressable accessibilityRole="button" onPress={() => { action.onPress(); hide(); }} style={({ pressed }) => ({ minHeight: 44, paddingHorizontal: space[3], justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}>
+            <Text size="sm" weight={600} style={{ color: c.accent, fontSize: 15 }}>{action.label}</Text>
+          </Pressable>
+        ) : null}
       </View>
     </Animated.View>
   );

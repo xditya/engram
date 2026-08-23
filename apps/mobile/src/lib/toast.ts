@@ -1,15 +1,18 @@
 import { create } from 'zustand';
 
-// One-line transient status ("Saved", "Synced"). Screens render it; anything can show it.
-export const useToast = create<{ message: string | null; show(message: string, ms?: number): void; hide(): void }>((set) => {
+type Action = { label: string; onPress: () => void };
+
+// One-line transient status ("Saved", "Let go · Undo"). Anything calls show(); the root layout renders it.
+export const useToast = create<{ message: string | null; action: Action | null; show(message: string, ms?: number, action?: Action): void; hide(): void }>((set) => {
   let timer: ReturnType<typeof setTimeout> | undefined;
   return {
     message: null,
-    show(message, ms = 2000) {
+    action: null,
+    show(message, ms = 2000, action = undefined) {
       clearTimeout(timer);
-      set({ message });
-      timer = setTimeout(() => set({ message: null }), ms);
+      set({ message, action: action ?? null });
+      timer = setTimeout(() => set({ message: null, action: null }), action ? Math.max(ms, 5000) : ms);
     },
-    hide: () => { clearTimeout(timer); set({ message: null }); },
+    hide: () => { clearTimeout(timer); set({ message: null, action: null }); },
   };
 });

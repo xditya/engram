@@ -33,7 +33,8 @@ export function SelectBar({ ids, onDone }: { ids: string[]; onDone: () => void }
   const letGo = () => {
     if (!confirm) return setConfirm(true); // second tap within 4 s confirms
     engram().db.transaction(() => { for (const id of ids) engram().db.items.letGo(id); });
-    show(`Let go ${n} · 30 days to recover`); onDone();
+    const gone = [...ids]; onDone();
+    show(`Let go ${n}`, 5000, { label: 'Undo', onPress: () => engram().db.transaction(() => { for (const id of gone) engram().db.items.restore(id); }) });
   };
 
   const action = (label: string, onPress: () => void, danger?: boolean) => (

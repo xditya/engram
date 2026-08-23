@@ -136,7 +136,8 @@ export function MetaBar({ item, onDismiss }: { item: Item; onDismiss: () => void
   useEffect(() => { if (!confirmLetGo) return; const t = setTimeout(() => setConfirmLetGo(false), 4000); return () => clearTimeout(t); }, [confirmLetGo]);
   const letGo = () => {
     if (!confirmLetGo) return setConfirmLetGo(true); // second tap within 4 s confirms
-    engram().db.items.letGo(item.id); show('Let go · 30 days to recover'); onDismiss();
+    engram().db.items.letGo(item.id); onDismiss();
+    show('Let go', 5000, { label: 'Undo', onPress: () => engram().db.items.restore(item.id) });
   };
 
   if (!open) {
