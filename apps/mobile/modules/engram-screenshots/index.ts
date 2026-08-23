@@ -23,5 +23,8 @@ export async function requestPermissions(): Promise<boolean> {
     ? [PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES, PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS]
     : [PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE];
   const res = await PermissionsAndroid.requestMultiple(wanted);
-  return wanted.every((p) => res[p] === PermissionsAndroid.RESULTS.GRANTED);
+  if (wanted.every((p) => res[p] === PermissionsAndroid.RESULTS.GRANTED)) return true;
+  // Denied with "don't ask again": Android will not show the dialog anymore; only the app's settings page can grant it.
+  if (wanted.some((p) => res[p] === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN)) throw new Error('blocked');
+  return false;
 }

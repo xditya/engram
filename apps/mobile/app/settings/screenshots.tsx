@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Platform } from 'react-native';
+import { Linking, Platform } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { useSettings, useToast } from '../../src/lib/engram';
 import * as Watcher from '../../modules/engram-screenshots';
@@ -20,7 +20,10 @@ export default function ScreenshotSettings() {
 
   const toggle = async (v: boolean) => {
     try {
-      if (v && !(await Watcher.requestPermissions())) return show('Photo access and notifications are needed to watch for screenshots');
+      let ok = true;
+      try { ok = !v || (await Watcher.requestPermissions()); }
+      catch { return show('Allow photos and notifications for engram', 8000, { label: 'Open settings', onPress: () => void Linking.openSettings() }); }
+      if (!ok) return show('Photo access and notifications are needed to watch for screenshots');
       patch('capture', { screenshotWatch: v });
       setTimeout(() => {
         const r = Watcher.isRunning();
