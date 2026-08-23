@@ -22,7 +22,7 @@ export function SpaceSheet({ open, initial, onSave, onClose, onDelete }: {
       <View style={{ gap: space[2], paddingTop: space[2] }}>
         <Text size="lg" weight={500}>{initial ? 'Edit Space' : 'New Space'}</Text>
         <Text size="xs" color="text3">Name</Text>
-        <TextInput value={name} onChangeText={setName} placeholder="Name" placeholderTextColor={c.text3} style={[field, { fontFamily: 'Geist' }]} accessibilityLabel="Space name" autoFocus />
+        <TextInput value={name} onChangeText={setName} placeholder="Name" placeholderTextColor={c.text3} style={[field, { fontFamily: 'Geist' }]} accessibilityLabel="Space name" />
         <Text size="xs" color="text3">Query</Text>
         <TextInput
           value={query}
