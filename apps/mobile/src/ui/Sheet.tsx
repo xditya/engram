@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Keyboard, Pressable, StyleSheet, View } from 'react-native';
-import Animated, { Easing, FadeIn, FadeOut, SlideInDown, SlideOutDown } from 'react-native-reanimated';
+import Animated, { Easing, FadeIn, FadeOut, LinearTransition, SlideInDown, SlideOutDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/useTheme';
 
@@ -31,6 +31,7 @@ export function Sheet({ open, onClose, children }: { open: boolean; onClose: () 
       <Animated.View
         entering={SlideInDown.duration(motion.slow).easing(ease)}
         exiting={SlideOutDown.duration(motion.base).easing(ease)}
+        layout={LinearTransition.duration(motion.base).easing(ease)}
         style={{
           position: 'absolute',
           left: 0,

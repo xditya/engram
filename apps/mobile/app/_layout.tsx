@@ -16,9 +16,10 @@ import '../src/features/settings/appearance';
 
 SplashScreen.preventAutoHideAsync();
 
-// expo-share-intent touches its native module on import; web export has none.
+// expo-share-intent touches its native module on import; web export has none. On Android the share intent
+// never reaches this tree: the translucent ShareActivity mounts src/features/share/ShareRoot instead.
 type ShareHook = () => { hasShareIntent: boolean; shareIntent: ShareIntentLike; resetShareIntent: () => void };
-const useShareIntent: ShareHook = RN.OS === 'web'
+const useShareIntent: ShareHook = RN.OS !== 'ios'
   ? () => ({ hasShareIntent: false, shareIntent: {}, resetShareIntent: () => {} })
   : (require('expo-share-intent') as typeof import('expo-share-intent')).useShareIntent;
 

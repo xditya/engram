@@ -51,6 +51,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ['expo-image-picker', { photosPermission: 'Save photos from your library into engram.' }],
     ['expo-media-library', { photosPermission: 'Save photos from your library into engram.', savePhotosPermission: 'Export images from engram to your library.' }],
     ['react-native-cloud-storage', { iCloudContainerEnvironment: 'Production' }],
+    // Listed before expo-share-intent: later plugins' manifest mods run first, and this one must see its filters.
+    './plugins/withShareOverlay',
     ['expo-share-intent', {
       iosActivationRules: { NSExtensionActivationSupportsWebURLWithMaxCount: 1, NSExtensionActivationSupportsWebPageWithMaxCount: 1, NSExtensionActivationSupportsText: true, NSExtensionActivationSupportsImageWithMaxCount: 10, NSExtensionActivationSupportsMovieWithMaxCount: 1, NSExtensionActivationSupportsFileWithMaxCount: 10 },
       iosAppGroupIdentifier: APP_GROUP,

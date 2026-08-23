@@ -17,11 +17,30 @@ Payload → capture mapping (`savePendingCapture`):
 
 ## Android
 
-The config plugin adds `SEND` / `SEND_MULTIPLE` intent filters for `text/*`, `image/*`, `video/*`, `*/*` to
-`MainActivity` at prebuild. `apps/mobile/android/` was generated before the plugin was added: run
-`npx expo prebuild --platform android` (or delete the folder and let EAS generate it) before the next build,
-then confirm the filters in `android/app/src/main/AndroidManifest.xml`. No separate process or memory
-ceiling; `savePendingCapture` runs in the app.
+`plugins/withShareOverlay.js` (listed before `expo-share-intent` in `app.config.ts`, because later plugins'
+manifest mods run first) moves the `SEND` / `SEND_MULTIPLE` filters off `MainActivity` onto a generated
+`ShareActivity` (`android/app/src/main/java/app/engram/ShareActivity.kt`, written at prebuild):
+
+- theme `Theme.Engram.ShareOverlay` (translucent window, transparent background) so the sharing app stays visible;
+- `launchMode="singleInstance"` + `excludeFromRecents`: it is always its task root, so `ExpoShareIntentModule`
+  handles the intent in place (it relaunches non-root activities with `NEW_TASK`), and `finish()` returns to
+  the sharing app. An `activity-alias` cannot do this: `android:theme` is not an alias attribute;
+- `mainComponentName = "share"`: `index.js` registers a second root (`src/features/share/ShareRoot.tsx`)
+  with no router and no opaque background, which renders `ShareOverlay` (save, fold into the trace mark,
+  Saved pill, live tags, Space toggles, Done / back / 6 s idle -> `resetShareIntent()` then
+  `BackHandler.exitApp()` -> `ShareActivity.finish()`). Tapping the mark opens `engram://card/<id>` in the
+  main app. `app/_layout.tsx` ignores share intents on Android so the main tree never double-handles one.
+
+After `npx expo prebuild --platform android` confirm the manifest has the filters on `.ShareActivity` only.
+
+Dev builds only: expo-dev-launcher intercepts a cold share (no bundle loaded yet) with its own launcher UI; open
+the app from Metro once, then share. Release builds have no launcher.
+
+## iOS
+
+Unchanged: the stock expo-share-intent extension opens the main app, and `app/_layout.tsx` shows the
+`ShareSheet` modal. The Android overlay (stay over the source app, animate, edit tags) needs
+expo-share-extension's custom view running inside the extension process; not attempted here.
 
 ## iOS, later: page HTML from Safari
 

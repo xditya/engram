@@ -10,11 +10,11 @@ import { useTheme } from '../../theme/useTheme';
 import { Button, Text } from '../../ui';
 import { splitTags } from './tags';
 
-const glyph: Partial<Record<ItemType, IconName>> = { article: 'type-article', video: 'type-video', image: 'type-image', pdf: 'type-pdf', product: 'type-product', quote: 'type-quote', note: 'type-note' };
+export const glyph: Partial<Record<ItemType, IconName>> = { article: 'type-article', video: 'type-video', image: 'type-image', pdf: 'type-pdf', product: 'type-product', quote: 'type-quote', note: 'type-note' };
 const domainOf = (url: string) => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return url; } };
 
 // What the share target hands us, described without touching the network.
-function describe(s: ShareIntentLike): { type: ItemType; title: string; meta: string } {
+export function describe(s: ShareIntentLike): { type: ItemType; title: string; meta: string } {
   if (s.webUrl) {
     const type = extract.guessTypeFromUrl(s.webUrl);
     return { type, title: s.text && s.text !== s.webUrl ? s.text : domainOf(s.webUrl), meta: `${type === 'note' ? 'link' : type} · ${domainOf(s.webUrl)}` };
