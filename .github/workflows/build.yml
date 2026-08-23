@@ -19,6 +19,10 @@ on:
         description: Mark the release as a pre-release
         type: boolean
         default: true
+      android_abis:
+        description: Android ABIs to build (arm64-v8a covers phones since 2017; add armeabi-v7a for old 32-bit ones)
+        type: string
+        default: arm64-v8a
 
 # Needed by the release job to create tags and upload assets.
 permissions:
@@ -78,9 +82,28 @@ jobs:
         working-directory: ${{ env.APP_DIR }}
         run: npx expo prebuild --platform ios --clean
 
+      - name: Cache Pods
+        # pod install re-downloads and re-links everything otherwise; keyed on the JS lockfile
+        # because Podfile.lock only exists after this step.
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.APP_DIR }}/ios/Pods
+          key: ${{ runner.os }}-Pods-${{ hashFiles('pnpm-lock.yaml', 'apps/mobile/app.config.ts') }}
+
       - name: Install CocoaPods
         working-directory: ${{ env.APP_DIR }}/ios
         run: pod install
+
+      - name: Cache ccache
+        # React Native's Xcode build honours ccache; a warm cache roughly halves compile time.
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/ccache
+          key: ${{ runner.os }}-ccache-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.run_id }}
+          restore-keys: ${{ runner.os }}-ccache-${{ hashFiles('pnpm-lock.yaml') }}-
+
+      - name: Install ccache
+        run: brew install ccache || true
 
       - name: Resolve Xcode scheme
         id: scheme
@@ -97,6 +120,7 @@ jobs:
       - name: Build Unsigned Archive
         working-directory: ${{ env.APP_DIR }}
         run: |
+          export USE_CCACHE=1 CCACHE_DIR=~/Library/Caches/ccache
           xcodebuild \
             -workspace "${{ steps.scheme.outputs.workspace }}" \
             -scheme "${{ steps.scheme.outputs.scheme }}" \
@@ -107,7 +131,11 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGN_ENTITLEMENTS="" \
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            -parallelizeTargets \
+            -quiet \
             archive
+          ccache -s || true
 
       - name: Check the share extension is embedded
         # The share sheet entry lives in PlugIns/<name>.appex. If the archive lacks it,
@@ -167,18 +195,22 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Cache Gradle
-        # setup-java's built-in `cache: gradle` can't be used here: it hashes
-        # **/*.gradle* at checkout time, but android/ is gitignored and only
-        # exists after prebuild, so it fails with "No file ... matched".
-        # Key off the lockfile instead; that is what determines the deps.
+      - name: Setup Gradle
+        # Dependency cache plus Gradle's build cache (task outputs), so unchanged modules are not recompiled.
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
+
+      - name: Cache native builds
+        # CMake output for the C++ libraries (ExecuTorch, op-sqlite, Reanimated, worklets) is the bulk of the
+        # build. It lives under node_modules/*/android/.cxx and the app's .cxx; keyed on the lockfile + ABIs.
         uses: actions/cache@v4
         with:
           path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-gradle-
+            node_modules/**/android/.cxx
+            node_modules/**/android/build
+            apps/mobile/android/app/.cxx
+          key: ${{ runner.os }}-cxx-${{ inputs.android_abis }}-${{ hashFiles('pnpm-lock.yaml') }}
 
       - name: Free disk space
         # The runner starts with ~14 GB free; four ABIs of ExecuTorch, op-sqlite and
@@ -203,8 +235,9 @@ jobs:
         working-directory: ${{ env.APP_DIR }}/android
         run: |
           chmod +x gradlew
-          # Phones are arm64 (armeabi-v7a for the few 32-bit ones left); x86 is emulator-only.
-          ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a,armeabi-v7a
+          echo "org.gradle.caching=true" >> gradle.properties
+          echo "org.gradle.parallel=true" >> gradle.properties
+          ./gradlew assembleRelease --build-cache -PreactNativeArchitectures=${{ inputs.android_abis }}
           df -h /
 
       - name: Collect APK
