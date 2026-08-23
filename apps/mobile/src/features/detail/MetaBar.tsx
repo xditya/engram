@@ -137,7 +137,7 @@ export function MetaBar({ item, onDismiss }: { item: Item; onDismiss: () => void
   const letGo = () => {
     if (!confirmLetGo) return setConfirmLetGo(true); // second tap within 4 s confirms
     engram().db.items.letGo(item.id); onDismiss();
-    show('Let go', 5000, { label: 'Undo', onPress: () => engram().db.items.restore(item.id) });
+    show('Let go · shake to undo', 5000, { label: 'Undo', shake: true, onPress: () => engram().db.items.restore(item.id) });
   };
 
   if (!open) {

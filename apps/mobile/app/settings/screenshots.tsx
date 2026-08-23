@@ -10,7 +10,7 @@ export default function ScreenshotSettings() {
   const on = useSettings((s) => s.capture.screenshotWatch);
   const patch = useSettings((s) => s.patch);
   const [running, setRunning] = useState(Watcher.isRunning());
-  // The ongoing notification's Stop action turns the watcher off outside the app; reflect that here.
+  // Reflect whether the job is still scheduled (gone after a force-stop or cleared data).
   useFocusEffect(useCallback(() => {
     const r = Watcher.isRunning();
     setRunning(r);
@@ -27,12 +27,12 @@ export default function ScreenshotSettings() {
     <Page title="Screenshots">
       {Platform.OS === 'android' ? (
         <Group label="Capture">
-          <ToggleRow title="Watch for screenshots" subtitle="When you take a screenshot, engram offers to save it. Needs photo access and shows a small ongoing notification." value={on} onChange={(v) => void toggle(v)} />
+          <ToggleRow title="Watch for screenshots" subtitle="When you take a screenshot, engram offers to save it. Needs photo access." value={on} onChange={(v) => void toggle(v)} />
         </Group>
       ) : null}
       <Text size="sm" color="text2" style={{ paddingHorizontal: 4 }}>
         {Platform.OS === 'android'
-          ? (on ? (running ? 'Watching. A notification appears after each screenshot.' : 'Starting…') : 'Off. Screenshots taken while engram is open still show a prompt.')
+          ? (on ? (running ? 'Watching. A banner appears after each screenshot.' : 'Starting…') : 'Off. Screenshots taken while engram is open still show a prompt.')
           : 'iOS does not let apps notice screenshots in the background. A screenshot taken while engram is open shows a prompt to save it; for anything else, use the share sheet.'}
       </Text>
     </Page>

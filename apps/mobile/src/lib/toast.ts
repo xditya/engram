@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-type Action = { label: string; onPress: () => void };
+type Action = { label: string; onPress: () => void; shake?: boolean }; // shake: the device can trigger it too
 
 // One-line transient status ("Saved", "Let go · Undo"). Anything calls show(); the root layout renders it.
 export const useToast = create<{ message: string | null; action: Action | null; show(message: string, ms?: number, action?: Action): void; hide(): void }>((set) => {

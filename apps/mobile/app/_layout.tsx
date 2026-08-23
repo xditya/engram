@@ -1,5 +1,5 @@
 import '../src/polyfills';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { Modal, Platform as RN, Pressable, View } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
@@ -14,6 +14,8 @@ import { useTheme } from '../src/theme/useTheme';
 import { useEngram, useToast, type ShareIntentLike } from '../src/lib/engram';
 import { ShareSheet, useSavedToast } from '../src/features/capture';
 import { listenForScreenshots, saveLatestScreenshot, useScreenshotPrompt } from '../src/lib/screenshots';
+import { useShake } from '../src/lib/useShake';
+import * as Haptics from 'expo-haptics';
 import { Text } from '../src/ui';
 import '../src/features/settings/appearance';
 
@@ -74,6 +76,8 @@ function Toast() {
   const message = useToast((s) => s.message);
   const action = useToast((s) => s.action);
   const hide = useToast((s) => s.hide);
+  const fire = useCallback(() => { if (!action) return; void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); action.onPress(); hide(); }, [action, hide]);
+  useShake(!!action?.shake, fire);
   if (!message) return null;
   return (
     <Animated.View entering={FadeIn.duration(120)} exiting={FadeOut.duration(200)} pointerEvents={action ? 'box-none' : 'none'} style={{ position: 'absolute', left: 0, right: 0, bottom: 148, alignItems: 'center' }}>
