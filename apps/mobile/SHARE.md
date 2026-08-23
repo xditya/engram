@@ -120,3 +120,19 @@ to the share extension:
 
 The 2 MB cap keeps the extension inside its ~120 MB memory budget and the App Group hand-off small;
 images inside the HTML are not inlined.
+
+## iOS: engram missing from the share sheet after sideloading
+
+The share sheet entry is an app extension (`PlugIns/engram.appex`) with its own bundle id and the
+`group.app.engram` App Group. Two things remove it:
+
+1. **The sideloading tool strips it.** With a free Apple ID, AltStore and Sideloadly offer (or default to)
+   "remove app extensions" because each extension needs its own App ID against the 10-per-week limit and
+   App Groups need a paid account. Keep the extension when asked; it needs a paid Apple Developer account
+   to sign with the App Group entitlement. Without that, the main app installs but nothing appears in
+   the share sheet. TestFlight/EAS with a paid account is the clean path.
+2. **The archive never contained it.** The CI job now fails if the `.appex` is absent from the archive,
+   so a green iOS build means the extension is in the IPA.
+
+On the phone, the entry can also be toggled: open any share sheet, scroll the app row to the end,
+tap *More*, and make sure **engram** is enabled (new extensions are sometimes off by default).
