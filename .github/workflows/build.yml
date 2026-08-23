@@ -82,9 +82,6 @@ jobs:
         working-directory: ${{ env.APP_DIR }}
         run: npx expo prebuild --platform ios --clean
 
-      - name: Install ccache
-        run: brew install ccache || true
-
       - name: Cache Pods
         # pod install re-downloads and re-links everything otherwise; keyed on the JS lockfile
         # because Podfile.lock only exists after this step.
@@ -94,17 +91,8 @@ jobs:
           key: ${{ runner.os }}-Pods-${{ hashFiles('pnpm-lock.yaml', 'apps/mobile/app.config.ts') }}
 
       - name: Install CocoaPods
-        # USE_CCACHE makes React Native's podspecs route clang through ccache.
         working-directory: ${{ env.APP_DIR }}/ios
-        run: USE_CCACHE=1 pod install
-
-      - name: Cache ccache
-        # React Native's Xcode build honours ccache; a warm cache roughly halves compile time.
-        uses: actions/cache@v4
-        with:
-          path: ~/Library/Caches/ccache
-          key: ${{ runner.os }}-ccache-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.run_id }}
-          restore-keys: ${{ runner.os }}-ccache-${{ hashFiles('pnpm-lock.yaml') }}-
+        run: pod install
 
       - name: Resolve Xcode scheme
         id: scheme
@@ -121,7 +109,6 @@ jobs:
       - name: Build Unsigned Archive
         working-directory: ${{ env.APP_DIR }}
         run: |
-          export USE_CCACHE=1 CCACHE_DIR=~/Library/Caches/ccache
           xcodebuild \
             -workspace "${{ steps.scheme.outputs.workspace }}" \
             -scheme "${{ steps.scheme.outputs.scheme }}" \
@@ -134,9 +121,7 @@ jobs:
             CODE_SIGN_ENTITLEMENTS="" \
             COMPILER_INDEX_STORE_ENABLE=NO \
             -parallelizeTargets \
-            -quiet \
             archive
-          ccache -s || true
 
       - name: Check the share extension is embedded
         # The share sheet entry lives in PlugIns/<name>.appex. If the archive lacks it,
@@ -230,6 +215,14 @@ jobs:
         working-directory: ${{ env.APP_DIR }}
         run: npx expo prebuild --platform android --clean
 
+      - name: Probe node resolution from a library directory
+        # gesture-handler / screens locate react-native at configure time with this exact command from
+        # their own folders (hoisted monorepo). Running it here surfaces the real error if it fails.
+        run: |
+          which node && node -v
+          ls -d node_modules/react-native apps/mobile/node_modules/react-native 2>/dev/null || true
+          cd node_modules/react-native-gesture-handler/android && node --print "require.resolve('react-native/package.json')"
+
       - name: Build Release APK
         # The Expo template signs the release build with the debug keystore, so
         # this needs no secrets. The APK is sideload-ready, not Play-Store-ready.
@@ -237,8 +230,7 @@ jobs:
         run: |
           chmod +x gradlew
           echo "org.gradle.caching=true" >> gradle.properties
-          echo "org.gradle.parallel=true" >> gradle.properties
-          ./gradlew assembleRelease --build-cache -PreactNativeArchitectures=${{ inputs.android_abis }}
+          ./gradlew assembleRelease --build-cache --stacktrace -PreactNativeArchitectures=${{ inputs.android_abis }}
           df -h /
 
       - name: Collect APK
