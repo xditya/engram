@@ -23,7 +23,9 @@ export default function AppearanceSettings() {
   const pick = (id: AppIcon) => {
     patch('ui', { appIcon: id });
     // graphite is the built-in icon; the others are alternates. iOS confirms with a system alert.
-    setAppIcon(id === 'graphite' ? null : id).catch(() => {});
+    // Dev builds keep the built-in icon: the Android dev launcher starts MainActivity by explicit class, which the
+    // icon module disables while an alias is active, so the next cold start would fail with ActivityNotFoundException.
+    if (!__DEV__) setAppIcon(id === 'graphite' ? null : id).catch(() => {});
   };
   return (
     <Page title="Appearance">
