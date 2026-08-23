@@ -1,12 +1,17 @@
-import { Linking, Platform as RN, View } from 'react-native';
+import { Linking, Platform as RN, Pressable, View } from 'react-native';
 import * as Application from 'expo-application';
 import Constants from 'expo-constants';
-import { Trace } from '../../src/icons/Icon';
+import { Icon, Trace, type IconName } from '../../src/icons/Icon';
 import { Group, Page } from '../../src/features/settings/ui';
 import { useTheme } from '../../src/theme/useTheme';
 import { Row, Text } from '../../src/ui';
 
 const SITE = 'https://engram.xditya.me';
+const DEV: { icon: IconName; label: string; value: string; url: string }[] = [
+  { icon: 'globe', label: 'Portfolio', value: 'xditya.me', url: 'https://xditya.me' },
+  { icon: 'github', label: 'GitHub', value: 'xditya', url: 'https://github.com/xditya' },
+  { icon: 'coffee', label: 'Buy me a coffee', value: 'buymeacoffee.com/xditya', url: 'https://buymeacoffee.com/xditya' },
+];
 const PROMISE = [
   ['Your data is always exportable', 'in one tap, into a zip of your original files plus engram.json and cards.csv (including AI tags and summaries) and an Obsidian-style markdown folder. The export format is documented in the repo and frozen by a test.'],
   ['Your sync backend is yours.', 'Sync goes to your Google Drive, your iCloud, or any WebDAV server you choose, as end-to-end encrypted op-logs and blobs. We run no server and hold no keys. Your recovery phrase decrypts everything without engram\'s help; the format is specified in the repo and a standalone decrypt script lives there too.'],
@@ -37,6 +42,20 @@ export default function About() {
           </View>
         ))}
       </View>
+      <Group label="Made by Aditya S">
+        <View style={{ flexDirection: 'row', justifyContent: 'space-around', paddingVertical: space[3] }}>
+          {DEV.map((d) => (
+            <Pressable key={d.url} accessibilityRole="link" accessibilityLabel={d.label} onPress={() => Linking.openURL(d.url)} style={({ pressed }) => ({ alignItems: 'center', gap: space[2], minWidth: 88, minHeight: 44, opacity: pressed ? 0.6 : 1 })}>
+              <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: c.surface2, alignItems: 'center', justifyContent: 'center' }}>
+                <Icon name={d.icon} size={22} color={d.icon === 'coffee' ? c.accent : c.text} />
+              </View>
+              <Text size="xs" weight={500}>{d.label}</Text>
+              <Text size="xs" mono color="text3" numberOfLines={1}>{d.value}</Text>
+            </Pressable>
+          ))}
+        </View>
+        <Text size="xs" color="text2" style={{ paddingBottom: space[3] }}>engram is free and open source. If it earns a place on your phone, a coffee keeps the lights on.</Text>
+      </Group>
       <Group label="Links">
         <Row title="Website" value="engram.xditya.me" onPress={() => Linking.openURL(SITE)} />
         <Row title="Source code" value="AGPL-3.0" onPress={() => Linking.openURL(`${SITE}/source`)} />

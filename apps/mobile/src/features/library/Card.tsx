@@ -106,11 +106,11 @@ export function Card({ entry, width, selecting, selected, showTrace, fresh, onPr
         accessibilityState={{ selected }}
         onPress={onPress}
         onLongPress={onLongPress}
-        style={({ pressed }) => ({ width, borderRadius: radius.md, overflow: 'hidden', backgroundColor: c.surface, opacity: pressed ? 0.85 : 1 })}
+        style={({ pressed }) => ({ width, borderRadius: radius.md, overflow: 'hidden', backgroundColor: c.surface, opacity: pressed ? 0.85 : 1, paddingBottom: showTrace && item.type !== 'image' ? 20 : 0 })}
       >
         {body}
         {showTrace ? (
-          <View pointerEvents="none" style={{ position: 'absolute', left: 8, bottom: 8 }}>
+          <View pointerEvents="none" style={{ position: 'absolute', left: pad, bottom: 6 }}>
             <Trace size={12} opacity={trace.minOpacity + strength * (trace.maxOpacity - trace.minOpacity)} color={uri && item.type === 'image' ? '#FFFFFF' : c.text} />
           </View>
         ) : null}

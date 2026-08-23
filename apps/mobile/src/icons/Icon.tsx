@@ -1,5 +1,8 @@
 import type { SvgProps } from 'react-native-svg';
+import Coffee from './svg/coffee.svg';
 import Density from './svg/density.svg';
+import Github from './svg/github.svg';
+import Globe from './svg/globe.svg';
 import DeviceBrowser from './svg/device-browser.svg';
 import DeviceDesktop from './svg/device-desktop.svg';
 import DevicePhone from './svg/device-phone.svg';
@@ -29,7 +32,10 @@ import ViewList from './svg/view-list.svg';
 import { useTheme } from '../theme/useTheme';
 
 const icons = {
+  coffee: Coffee,
   density: Density,
+  github: Github,
+  globe: Globe,
   'device-browser': DeviceBrowser,
   'device-desktop': DeviceDesktop,
   'device-phone': DevicePhone,
