@@ -1,5 +1,6 @@
 import '../src/polyfills';
 import { useEffect, useState } from 'react';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { Modal, Platform as RN, Pressable, View } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import * as Linking from 'expo-linking';
@@ -67,6 +68,20 @@ function useCaptureIntents() {
 }
 
 // "Save this screenshot?" row, shown for a few seconds after a screenshot is taken with engram in front.
+// The app-wide one-line status pill ("Saved", "Couldn't sync"). Anything calls useToast.show; only this renders it.
+function Toast() {
+  const { c, space } = useTheme();
+  const message = useToast((s) => s.message);
+  if (!message) return null;
+  return (
+    <Animated.View entering={FadeIn.duration(120)} exiting={FadeOut.duration(200)} pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, bottom: 148, alignItems: 'center' }}>
+      <View accessibilityLiveRegion="polite" style={{ minHeight: 44, paddingHorizontal: space[5], borderRadius: 22, backgroundColor: c.text, justifyContent: 'center', maxWidth: '86%' }}>
+        <Text size="sm" weight={500} numberOfLines={2} style={{ color: c.bg, fontSize: 15 }}>{message}</Text>
+      </View>
+    </Animated.View>
+  );
+}
+
 function ScreenshotPrompt() {
   const { c, space } = useTheme();
   const pending = useScreenshotPrompt((s) => s.pending);
@@ -123,6 +138,7 @@ export default function RootLayout() {
       </Stack>
       {shareSheet}
       <ScreenshotPrompt />
+      <Toast />
     </GestureHandlerRootView>
   );
 }

@@ -21,7 +21,13 @@ export function describe(s: ShareIntentLike): { type: ItemType; title: string; m
   }
   if (s.files?.length) {
     const n = s.files.length;
-    return { type: 'image', title: n > 1 ? `${n} files` : s.files[0]!.path.split('/').pop() ?? 'file', meta: n > 1 ? `${n} files` : 'file' };
+    const p = s.files[0]!.path;
+    const ext = p.split('?')[0]!.split('.').pop()?.toLowerCase() ?? '';
+    const kind = /^(jpe?g|png|webp|gif|heic|heif|bmp|avif)$/.test(ext) || /\/images?\//.test(p) ? 'image'
+      : /^(mp4|mov|webm|mkv|avi)$/.test(ext) || /\/video\//.test(p) ? 'video'
+      : ext === 'pdf' ? 'pdf' : 'file';
+    const name = p.split('/').pop() ?? kind;
+    return { type: kind === 'file' ? 'image' : kind, title: n > 1 ? `${n} files` : name, meta: n > 1 ? `${n} files` : kind };
   }
   return { type: 'note', title: (s.text ?? '').trim().split('\n')[0]!.slice(0, 80), meta: 'note' };
 }
