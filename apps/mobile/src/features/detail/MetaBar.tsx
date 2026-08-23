@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -120,7 +120,12 @@ export function MetaBar({ item, onDismiss }: { item: Item; onDismiss: () => void
   const line = `${item.type} · saved ${shortDate(item.created_at)} · ${tags.length} ${tags.length === 1 ? 'tag' : 'tags'}`;
 
   const togglePin = () => { const { db } = engram(); pinned ? db.items.unpin(item.id) : db.items.pin(item.id); };
-  const letGo = () => { engram().db.items.letGo(item.id); show('Let go · 30 days to recover'); onDismiss(); };
+  const [confirmLetGo, setConfirmLetGo] = useState(false);
+  useEffect(() => { if (!confirmLetGo) return; const t = setTimeout(() => setConfirmLetGo(false), 4000); return () => clearTimeout(t); }, [confirmLetGo]);
+  const letGo = () => {
+    if (!confirmLetGo) return setConfirmLetGo(true); // second tap within 4 s confirms
+    engram().db.items.letGo(item.id); show('Let go · 30 days to recover'); onDismiss();
+  };
 
   if (!open) {
     return (
@@ -176,7 +181,7 @@ export function MetaBar({ item, onDismiss }: { item: Item; onDismiss: () => void
         <View style={{ flexDirection: 'row', gap: space[2], paddingTop: space[4] }}>
           <Button title={pinned ? 'Unpin' : pinFull ? `${MAX_PINNED} pinned` : 'Pin'} variant="outline" disabled={pinFull} onPress={togglePin} style={{ flex: 1 }} />
           <Button title="Share" variant="outline" onPress={() => void shareItem(item).catch((e: Error) => show(e.message))} style={{ flex: 1 }} />
-          <Button title="Let go" variant="outline" danger onPress={letGo} style={{ flex: 1 }} />
+          <Button title={confirmLetGo ? 'Tap again to let go' : 'Let go'} variant="outline" danger onPress={letGo} style={{ flex: confirmLetGo ? 2 : 1 }} />
         </View>
       </ScrollView>
     </View>
