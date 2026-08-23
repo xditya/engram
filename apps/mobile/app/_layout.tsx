@@ -1,6 +1,6 @@
 import '../src/polyfills';
 import { useEffect, useState } from 'react';
-import { Modal, Platform as RN, Pressable } from 'react-native';
+import { Modal, Platform as RN, Pressable, View } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import * as Linking from 'expo-linking';
 import * as SplashScreen from 'expo-splash-screen';
@@ -12,6 +12,8 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useTheme } from '../src/theme/useTheme';
 import { useEngram, useToast, type ShareIntentLike } from '../src/lib/engram';
 import { ShareSheet, useSavedToast } from '../src/features/capture';
+import { listenForScreenshots, saveLatestScreenshot, useScreenshotPrompt } from '../src/lib/screenshots';
+import { Text } from '../src/ui';
 import '../src/features/settings/appearance';
 
 SplashScreen.preventAutoHideAsync();
@@ -64,6 +66,26 @@ function useCaptureIntents() {
   );
 }
 
+// "Save this screenshot?" row, shown for a few seconds after a screenshot is taken with engram in front.
+function ScreenshotPrompt() {
+  const { c, space } = useTheme();
+  const pending = useScreenshotPrompt((s) => s.pending);
+  const dismiss = useScreenshotPrompt((s) => s.dismiss);
+  const show = useToast((s) => s.show);
+  if (!pending) return null;
+  return (
+    <View style={{ position: 'absolute', left: space[4], right: space[4], bottom: 92, flexDirection: 'row', alignItems: 'center', minHeight: 44, paddingLeft: space[3], borderRadius: 8, backgroundColor: c.surface, borderWidth: 1, borderColor: c.line }}>
+      <Text size="sm" color="text2" style={{ flex: 1 }}>Save this screenshot?</Text>
+      <Pressable accessibilityRole="button" onPress={() => void saveLatestScreenshot().catch((e: Error) => { console.warn('screenshot save', e); show(`Couldn't save: ${e.message}`); })} style={{ minHeight: 44, paddingHorizontal: space[3], justifyContent: 'center' }}>
+        <Text size="sm" weight={500} color="accent">Save</Text>
+      </Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="Dismiss" onPress={dismiss} style={{ minHeight: 44, paddingHorizontal: space[3], justifyContent: 'center' }}>
+        <Text size="sm" color="text3">Not now</Text>
+      </Pressable>
+    </View>
+  );
+}
+
 export default function RootLayout() {
   const { c, dark } = useTheme();
   const { engram, error } = useEngram();
@@ -77,6 +99,7 @@ export default function RootLayout() {
   const ready = (loaded || !!fontError) && (!!engram || !!error);
 
   useEffect(() => { if (ready) SplashScreen.hideAsync(); }, [ready]);
+  useEffect(() => { if (engram) listenForScreenshots(); }, [engram]);
   const shareSheet = useCaptureIntents();
 
   if (!ready) return null;
@@ -99,6 +122,7 @@ export default function RootLayout() {
         <Stack.Screen name="sync" />
       </Stack>
       {shareSheet}
+      <ScreenshotPrompt />
     </GestureHandlerRootView>
   );
 }

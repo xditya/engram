@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { View } from 'react-native';
+import { Platform as RN, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useEngram, useLiveQuery, useSettings, useSyncStatus } from '../../src/lib/engram';
 import { useAppearance } from '../../src/features/settings/appearance';
@@ -40,6 +40,7 @@ export default function Settings() {
     <Page title="Settings">
       <Group label="Library">
         <Row title="Library" subtitle="Density, trace indicator, default view" value={s.ui.view === 'grid' ? 'Grid' : 'List'} onPress={go('/settings/library')} />
+        <Row title="Screenshots" subtitle="Offer to save each screenshot you take" value={RN.OS === 'android' ? (s.capture.screenshotWatch ? 'On' : 'Off') : undefined} onPress={go('/settings/screenshots')} />
       </Group>
       <Group label="Intelligence">
         <Row title="Intelligence" subtitle={s.intelligence.mode === 'off' ? 'Tags, summaries and visual search. Run on this device or bring your own key.' : undefined} value={intel} onPress={go('/settings/intelligence')} />

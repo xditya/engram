@@ -8,6 +8,7 @@ export interface Settings {
   sync: { backend: SyncBackend; webdav?: { baseUrl: string; username: string }; deviceName: string };
   ui: { view: 'grid' | 'list'; density: 'cozy' | 'compact'; sort: 'saved' | 'modified' | 'opened' | 'title'; traceIndicator: boolean };
   advanced: { googleClientId?: string };
+  capture: { screenshotWatch: boolean }; // Android: the background screenshot watcher
   spend: { month: string; usd: number }; // AI spend, reset when the month changes
   onboarded: boolean;
 }
@@ -17,6 +18,7 @@ export const DEFAULTS: Settings = {
   sync: { backend: 'off', deviceName: 'Phone' },
   ui: { view: 'grid', density: 'cozy', sort: 'saved', traceIndicator: true },
   advanced: {},
+  capture: { screenshotWatch: false },
   spend: { month: '', usd: 0 },
   onboarded: false,
 };
@@ -30,7 +32,7 @@ function load(): Settings {
     if (!f.exists) return DEFAULTS;
     const saved = JSON.parse(f.textSync()) as Partial<Settings>;
     const out = { ...DEFAULTS, ...saved };
-    for (const k of ['intelligence', 'sync', 'ui', 'advanced', 'spend'] as const) (out as Record<string, unknown>)[k] = { ...DEFAULTS[k], ...saved[k] };
+    for (const k of ['intelligence', 'sync', 'ui', 'advanced', 'capture', 'spend'] as const) (out as Record<string, unknown>)[k] = { ...DEFAULTS[k], ...saved[k] };
     return out;
   } catch { return DEFAULTS; } // web, or a corrupt file: start from defaults
 }
