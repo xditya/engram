@@ -32,6 +32,9 @@ export function LibraryScreen() {
   const { entries, pinned, count, more } = useLibrary(sort);
   // Sort chips stay out of the way: hidden at the top, revealed when the user scrolls back up, hidden again on scroll down.
   const [showSort, setShowSort] = useState(false);
+  const [fits, setFits] = useState(false); // content shorter than the viewport: nothing to scroll, so the chips just stay
+  const size = useRef({ content: 0, frame: 0 });
+  const measure = () => setFits(size.current.frame > 0 && size.current.content <= size.current.frame);
   const lastY = useRef(0);
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const y = e.nativeEvent.contentOffset.y;
@@ -86,7 +89,7 @@ export function LibraryScreen() {
     </View>
   );
 
-  const sortBar = showSort ? (
+  const sortBar = showSort || fits ? (
     <Animated.View entering={FadeInUp.duration(200)} exiting={FadeOutUp.duration(160)} style={{ flexDirection: 'row', gap: space[2], paddingHorizontal: space[4], paddingVertical: space[2], backgroundColor: c.bg }}>
       {SORTS.map(([k, label]) => <Chip key={k} label={label} active={sort === k} onPress={() => setSort(k)} />)}
     </Animated.View>
@@ -148,6 +151,8 @@ export function LibraryScreen() {
         onScrollBeginDrag={paste.dismiss}
         onScroll={onScroll}
         scrollEventThrottle={32}
+        onContentSizeChange={(_, h) => { size.current.content = h; measure(); }}
+        onLayout={(e) => { size.current.frame = e.nativeEvent.layout.height; measure(); }}
         contentContainerStyle={grid
           ? { paddingHorizontal: PAD - gutter / 2, paddingBottom: 140 }
           : { paddingHorizontal: PAD, paddingBottom: 140 }}
