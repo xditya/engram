@@ -15,6 +15,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     bundleIdentifier: 'app.engram',
     supportsTablet: true,
+    icon: { light: './assets/icon-light.png', dark: './assets/icon.png', tinted: './assets/icon-tinted.png' },
     associatedDomains: [`applinks:${DOMAIN}`, `webcredentials:${DOMAIN}`],
     entitlements: { 'com.apple.security.application-groups': [APP_GROUP] },
     infoPlist: {
@@ -26,7 +27,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   android: {
     package: 'app.engram',
     adaptiveIcon: {
-      backgroundColor: '#F4F5F7',
+      backgroundColor: '#15171A',
       foregroundImage: './assets/android-icon-foreground.png',
       backgroundImage: './assets/android-icon-background.png',
       monochromeImage: './assets/android-icon-monochrome.png',
@@ -46,7 +47,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-font',
     'expo-secure-store',
     'expo-image',
-    'expo-splash-screen',
+    ['expo-splash-screen', { image: './assets/splash-icon.png', imageWidth: 120, backgroundColor: '#F4F5F7', dark: { image: './assets/splash-icon.png', backgroundColor: '#0F1114' } }],
     'expo-background-task',
     'expo-web-browser',
     ['expo-camera', { cameraPermission: 'Capture a photo straight into engram.' }],
