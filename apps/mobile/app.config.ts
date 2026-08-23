@@ -39,6 +39,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   web: { favicon: './assets/favicon.png', bundler: 'metro', output: 'single' },
   plugins: [
+    // react-native-executorch's pod needs iOS 17; keep Android's minimum as Expo sets it.
+    ['expo-build-properties', { ios: { deploymentTarget: '17.0' } }],
     'expo-router',
     'expo-dev-client',
     'expo-font',

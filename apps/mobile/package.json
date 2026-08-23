@@ -21,6 +21,7 @@
     "expo-auth-session": "~57.0.8",
     "expo-background-task": "~57.0.12",
     "expo-blur": "~57.0.2",
+    "expo-build-properties": "~57.0.13",
     "expo-camera": "~57.0.4",
     "expo-clipboard": "~57.0.1",
     "expo-constants": "~57.0.13",

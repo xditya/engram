@@ -8,5 +8,8 @@
     "web": "pnpm --filter mobile exec expo start --web",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test"
+  },
+  "op-sqlite": {
+    "fts5": true
   }
 }
