@@ -39,7 +39,8 @@ class ScreenshotJob : JobService() {
     fun isScheduled(c: Context) = scheduler(c).getPendingJob(JOB_ID) != null
 
     fun setEnabled(c: Context, on: Boolean) {
-      prefs(c).edit().putBoolean("enabled", on).apply()
+      // Screenshots taken while the watch was off are not offered when it comes back on.
+      prefs(c).edit().putBoolean("enabled", on).putLong("since", System.currentTimeMillis() / 1000).apply()
       if (on) schedule(c) else scheduler(c).cancel(JOB_ID)
     }
 
@@ -72,7 +73,7 @@ class ScreenshotJob : JobService() {
   // Newest image added in the last 15 s whose name or path says "screenshot". MediaStore hides pending rows,
   // so the insert event usually finds nothing and the final update finds the finished file.
   private fun check() {
-    val since = System.currentTimeMillis() / 1000 - 15
+    val since = maxOf(System.currentTimeMillis() / 1000 - 15, prefs(this).getLong("since", 0))
     val cols = arrayOf(MediaStore.Images.Media._ID, MediaStore.Images.Media.DISPLAY_NAME, MediaStore.Images.Media.DATA)
     val sel = MediaStore.Images.Media.DATE_ADDED + " > ?"
     val order = MediaStore.Images.Media.DATE_ADDED + " DESC"
