@@ -91,8 +91,9 @@ jobs:
           key: ${{ runner.os }}-Pods-${{ hashFiles('pnpm-lock.yaml', 'apps/mobile/app.config.ts') }}
 
       - name: Install CocoaPods
+        # USE_CCACHE makes React Native's podspecs route clang through ccache.
         working-directory: ${{ env.APP_DIR }}/ios
-        run: pod install
+        run: USE_CCACHE=1 pod install
 
       - name: Cache ccache
         # React Native's Xcode build honours ccache; a warm cache roughly halves compile time.
