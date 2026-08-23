@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { Platform } from 'react-native';
 import { useFocusEffect } from 'expo-router';
-import { useSettings } from '../../src/lib/engram';
+import { useSettings, useToast } from '../../src/lib/engram';
 import * as Watcher from '../../modules/engram-screenshots';
 import { Group, Page, ToggleRow } from '../../src/features/settings/ui';
 import { Text } from '../../src/ui';
@@ -10,6 +10,7 @@ export default function ScreenshotSettings() {
   const on = useSettings((s) => s.capture.screenshotWatch);
   const patch = useSettings((s) => s.patch);
   const [running, setRunning] = useState(Watcher.isRunning());
+  const show = useToast((s) => s.show);
   // Reflect whether the job is still scheduled (gone after a force-stop or cleared data).
   useFocusEffect(useCallback(() => {
     const r = Watcher.isRunning();
@@ -18,9 +19,15 @@ export default function ScreenshotSettings() {
   }, [on, patch]));
 
   const toggle = async (v: boolean) => {
-    if (v && !(await Watcher.requestPermissions())) return;
-    patch('capture', { screenshotWatch: v });
-    setTimeout(() => setRunning(Watcher.isRunning()), 300);
+    try {
+      if (v && !(await Watcher.requestPermissions())) return show('Photo access and notifications are needed to watch for screenshots');
+      patch('capture', { screenshotWatch: v });
+      setTimeout(() => {
+        const r = Watcher.isRunning();
+        setRunning(r);
+        if (v && !r) show("Couldn't start the screenshot watcher");
+      }, 300);
+    } catch (e) { show(`Couldn't change: ${(e as Error).message}`); }
   };
 
   return (
