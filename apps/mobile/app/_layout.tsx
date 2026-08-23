@@ -1,3 +1,4 @@
+import '../src/polyfills';
 import { useEffect, useState } from 'react';
 import { Modal, Platform as RN, Pressable } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
