@@ -20,10 +20,16 @@ export default function ScreenshotSettings() {
 
   const toggle = async (v: boolean) => {
     try {
-      let ok = true;
-      try { ok = !v || (await Watcher.requestPermissions()); }
-      catch { return show('Allow photos and notifications for engram', 8000, { label: 'Open settings', onPress: () => void Linking.openSettings() }); }
-      if (!ok) return show('Photo access and notifications are needed to watch for screenshots');
+      if (v) {
+        try { await Watcher.requestPermissions(); }
+        catch (e) {
+          const why = (e as Error).message;
+          const text = why === 'partial' ? 'Allow access to all photos, not selected ones, so new screenshots are visible'
+            : why.startsWith('missing:') ? `Still missing: ${why.slice(8)}`
+            : 'Allow photos and notifications for engram';
+          return show(text, 8000, { label: 'Open settings', onPress: () => void Linking.openSettings() });
+        }
+      }
       patch('capture', { screenshotWatch: v });
       setTimeout(() => {
         const r = Watcher.isRunning();

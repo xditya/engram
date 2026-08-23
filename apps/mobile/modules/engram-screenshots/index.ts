@@ -23,8 +23,13 @@ export async function requestPermissions(): Promise<boolean> {
     ? [PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES, PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS]
     : [PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE];
   const res = await PermissionsAndroid.requestMultiple(wanted);
-  if (wanted.every((p) => res[p] === PermissionsAndroid.RESULTS.GRANTED)) return true;
-  // Denied with "don't ask again": Android will not show the dialog anymore; only the app's settings page can grant it.
-  if (wanted.some((p) => res[p] === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN)) throw new Error('blocked');
-  return false;
+  // Trust the system's current state over the dialog result: some OEM dialogs report 'denied' for an existing grant.
+  const missing: (typeof wanted)[number][] = [];
+  for (const p of wanted) if (!(await PermissionsAndroid.check(p))) missing.push(p);
+  if (!missing.length) return true;
+  // Android 14+ "Select photos": partial access cannot see new screenshots, so the watcher needs "Allow all".
+  if (api >= 34 && missing.includes(PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES)
+    && (await PermissionsAndroid.check('android.permission.READ_MEDIA_VISUAL_USER_SELECTED' as never))) throw new Error('partial');
+  if (missing.some((p) => res[p] === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN)) throw new Error('blocked');
+  throw new Error(`missing:${missing.map((p) => p.split('.').pop()).join(', ')}`);
 }
