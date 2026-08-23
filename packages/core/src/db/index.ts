@@ -259,3 +259,4 @@ export function createDb(
 }
 
 export { matchTags, autotagText } from './autotag';
+export { extractKeywords, siteTag } from './keywords';

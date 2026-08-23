@@ -74,8 +74,15 @@ export function createJobs(ctx: JobCtx): Queue {
       if (!item) return;
       const existing = db.tags.all().map((t) => t.tag);
       const have = new Set(db.tags.of(itemId));
-      const found = coreDb.matchTags(coreDb.autotagText(item), existing).filter((t) => !have.has(t));
-      if (found.length) addTags(itemId, found, 'ai');
+      const text = [item.body, item.ocr_text, item.summary].filter(Boolean).join(' ');
+      const title = item.type === 'image' && /^(screenshot|img|image|photo)[_-]?\d/i.test(item.title ?? '') ? null : item.title; // file names aren't topics
+      const found = new Set([
+        ...coreDb.matchTags(coreDb.autotagText(item), existing),
+        ...coreDb.extractKeywords(title, text),
+        ...(coreDb.siteTag(item.domain) ? [coreDb.siteTag(item.domain)!] : []),
+      ]);
+      const fresh = [...found].filter((t) => !have.has(t));
+      if (fresh.length) addTags(itemId, fresh, 'ai');
     },
     // 800 px JPEG from the original (image), a poster frame (video) or the enricher's full-size image.
     async thumb(itemId) {

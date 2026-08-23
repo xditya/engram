@@ -106,6 +106,11 @@ export async function createEngram(): Promise<Engram> {
   useSettings.subscribe((s, prev) => { if (s.sync !== prev.sync) { sync.reset(); if (s.sync.backend !== 'off') void sync.syncNow(); } });
   useSettings.subscribe((s, prev) => { if (s.intelligence.mode !== prev.intelligence.mode) void loadOnDevice(); });
   void sync.registerBackground();
+  // Cards that never got a tag (saved before tagging existed, or whose run found nothing) get one more pass each boot.
+  for (const { id } of platform.db.query<{ id: string }>(
+    "SELECT i.id FROM items i WHERE i.deleted_at IS NULL AND i.created_by = ? AND NOT EXISTS (SELECT 1 FROM tags t WHERE t.item_id = i.id AND t.deleted_at IS NULL) LIMIT 200",
+    [deviceId],
+  )) queue.enqueueFor(id, ['autotag']);
   void drain();
   void loadOnDevice();
 
