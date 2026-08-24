@@ -1,6 +1,7 @@
 import '../src/polyfills';
 import { useCallback, useEffect, useState } from 'react';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Modal, Pressable, View } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import * as Linking from 'expo-linking';
@@ -81,45 +82,56 @@ function useCaptureIntents() {
   );
 }
 
-// "Save this screenshot?" row, shown for a few seconds after a screenshot is taken with engram in front.
-// The app-wide one-line status pill ("Saved", "Couldn't sync"). Anything calls useToast.show; only this renders it.
+// Surface card anchored above the home search bar / FAB. Both the toast and the screenshot prompt are one
+// of these so they look identical; a card with no actions never intercepts taps.
+function Card({ message, actions }: { message: string; actions: { label: string; onPress: () => void; muted?: boolean }[] }) {
+  const { c, space, radius } = useTheme();
+  return (
+    <Animated.View entering={FadeInDown.duration(160)} exiting={FadeOutDown.duration(160)} pointerEvents={actions.length ? 'auto' : 'none'} accessibilityLiveRegion="polite"
+      style={{ flexDirection: 'row', alignItems: 'center', minHeight: 44, paddingLeft: space[4], paddingRight: actions.length ? space[1] : space[4], borderRadius: radius.md, backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 3 }}>
+      <Text size="sm" numberOfLines={2} style={{ flex: 1 }}>{message}</Text>
+      {actions.map((a) => (
+        <Pressable key={a.label} accessibilityRole="button" onPress={a.onPress} style={({ pressed }) => ({ minHeight: 44, paddingHorizontal: space[3], justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}>
+          <Text size="sm" weight={a.muted ? 400 : 500} color={a.muted ? 'text3' : 'accent'}>{a.label}</Text>
+        </Pressable>
+      ))}
+    </Animated.View>
+  );
+}
+
+// The app-wide one-line status ("Saved", "Couldn't sync"). Anything calls useToast.show; only this renders it.
 function Toast() {
-  const { c, space } = useTheme();
   const message = useToast((s) => s.message);
   const action = useToast((s) => s.action);
   const hide = useToast((s) => s.hide);
   const fire = useCallback(() => { if (!action) return; void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); action.onPress(); hide(); }, [action, hide]);
   useShake(!!action?.shake, fire);
   if (!message) return null;
-  return (
-    <Animated.View entering={FadeIn.duration(120)} exiting={FadeOut.duration(200)} pointerEvents={action ? 'box-none' : 'none'} style={{ position: 'absolute', left: 0, right: 0, bottom: 148, alignItems: 'center' }}>
-      <View accessibilityLiveRegion="polite" style={{ minHeight: 44, paddingLeft: space[5], paddingRight: action ? space[2] : space[5], borderRadius: 22, backgroundColor: c.text, flexDirection: 'row', alignItems: 'center', gap: space[3], maxWidth: '86%' }}>
-        <Text size="sm" weight={500} numberOfLines={2} style={{ color: c.bg, fontSize: 15, flexShrink: 1 }}>{message}</Text>
-        {action ? (
-          <Pressable accessibilityRole="button" onPress={() => { action.onPress(); hide(); }} style={({ pressed }) => ({ minHeight: 44, paddingHorizontal: space[3], justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}>
-            <Text size="sm" weight={600} style={{ color: c.accent, fontSize: 15 }}>{action.label}</Text>
-          </Pressable>
-        ) : null}
-      </View>
-    </Animated.View>
-  );
+  return <Card message={message} actions={action ? [{ label: action.label, onPress: () => { action.onPress(); hide(); } }] : []} />;
 }
 
+// "Save this screenshot?", shown for a few seconds after a screenshot is taken with engram in front.
 function ScreenshotPrompt() {
-  const { c, space } = useTheme();
   const pending = useScreenshotPrompt((s) => s.pending);
   const dismiss = useScreenshotPrompt((s) => s.dismiss);
   const show = useToast((s) => s.show);
   if (!pending) return null;
   return (
-    <View style={{ position: 'absolute', left: space[4], right: space[4], bottom: 92, flexDirection: 'row', alignItems: 'center', minHeight: 44, paddingLeft: space[3], borderRadius: 8, backgroundColor: c.surface, borderWidth: 1, borderColor: c.line }}>
-      <Text size="sm" color="text2" style={{ flex: 1 }}>Save this screenshot?</Text>
-      <Pressable accessibilityRole="button" onPress={() => void saveLatestScreenshot().catch((e: Error) => { console.warn('screenshot save', e); show(`Couldn't save: ${e.message}`); })} style={{ minHeight: 44, paddingHorizontal: space[3], justifyContent: 'center' }}>
-        <Text size="sm" weight={500} color="accent">Save</Text>
-      </Pressable>
-      <Pressable accessibilityRole="button" accessibilityLabel="Dismiss" onPress={dismiss} style={{ minHeight: 44, paddingHorizontal: space[3], justifyContent: 'center' }}>
-        <Text size="sm" color="text3">Not now</Text>
-      </Pressable>
+    <Card message="Save this screenshot?" actions={[
+      { label: 'Save', onPress: () => void saveLatestScreenshot().catch((e: Error) => { console.warn('screenshot save', e); show(`Couldn't save: ${e.message}`); }) },
+      { label: 'Not now', muted: true, onPress: dismiss },
+    ]} />
+  );
+}
+
+// Bottom column both cards stack in: clear of the 56 px FAB and its 16 px inset on the home screen.
+function Overlays() {
+  const { space } = useTheme();
+  const insets = useSafeAreaInsets();
+  return (
+    <View pointerEvents="box-none" style={{ position: 'absolute', left: space[4], right: space[4], bottom: insets.bottom + 84, gap: space[2] }}>
+      <ScreenshotPrompt />
+      <Toast />
     </View>
   );
 }
@@ -160,8 +172,7 @@ export default function RootLayout() {
         <Stack.Screen name="sync" />
       </Stack>
       {shareSheet}
-      <ScreenshotPrompt />
-      <Toast />
+      <Overlays />
     </GestureHandlerRootView>
   );
 }

@@ -13,7 +13,7 @@ export const theme = {
   font: {
     sans: 'Geist',
     mono: 'GeistMono',
-    size: { xs: 12, sm: 14, md: 16, lg: 18, xl: 22, xxl: 28, display: 34 },
+    size: { xs: 13, sm: 15, md: 17, lg: 19, xl: 24, xxl: 30, display: 36 },
     lineHeight: { tight: 1.2, body: 1.45, reader: 1.55 },
   },
   space: { 1: 4, 2: 8, 3: 12, 4: 16, 5: 24, 6: 32, 7: 48 },

@@ -96,7 +96,7 @@ export default function CaptureSheet() {
             style={({ pressed }) => ({ width: '48%', flexGrow: 1, backgroundColor: c.surface, borderRadius: 14, paddingVertical: 18, paddingHorizontal: 16, gap: 8, opacity: pressed ? 0.8 : 1 })}
           >
             <Icon name={t.icon} />
-            <Text weight={500} style={{ fontSize: 15 }}>{t.label}</Text>
+            <Text weight={500} size="sm">{t.label}</Text>
             <Text size="xs" color="text2">{t.hint}</Text>
           </Pressable>
         ))}

@@ -19,7 +19,7 @@ import { usePasteChip } from './usePasteChip';
 import { SHARE_TIP, useIntelligenceNudge, useShareTip } from '../onboarding';
 
 const SORTS: [Sort, string][] = [['saved', 'Date saved'], ['opened', 'Last opened'], ['type', 'Type'], ['title', 'Title']];
-const PAD = 16;
+const PAD = 12; // narrower page inset than the 16 pt header so two columns stay wide on 390 pt phones
 type Density = 'comfortable' | 'cozy' | 'compact';
 const DENSITY: Record<Density, { label: string; next: Density }> = {
   comfortable: { label: 'Comfortable', next: 'cozy' }, cozy: { label: 'Normal', next: 'compact' }, compact: { label: 'Dense', next: 'comfortable' },
@@ -52,7 +52,7 @@ export function LibraryScreen() {
   const collapse = useSharedValue(0);
   const fold = (v: boolean) => { folded.current = v; collapse.value = withTiming(v ? 1 : 0, { duration: 240, easing: Easing.out(Easing.cubic) }); };
   const { width: winW } = useWindowDimensions();
-  const searchW = winW - space[4] * 2 - 56 - space[3];
+  const searchW = winW - space[4] * 2 - 60 - space[3];
   const searchStyle = useAnimatedStyle(() => ({
     width: interpolate(collapse.value, [0, 1], [searchW, 0]),
     opacity: interpolate(collapse.value, [0, 0.6, 1], [1, 0, 0]),
@@ -126,9 +126,9 @@ export function LibraryScreen() {
     </View>
   );
 
-  // 20 px glyphs 16 px apart; the 44 pt target comes from hitSlop, not from the box.
+  // 22 px glyphs in a 24 px box, 16 px apart; the 44 pt target comes from hitSlop, not from the box.
   const iconButton = (name: Parameters<typeof Icon>[0]['name'], label: string, onPress: () => void) => (
-    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} hitSlop={12} style={{ width: 20, height: 20, alignItems: 'center', justifyContent: 'center' }}>
+    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} hitSlop={12} style={{ width: 24, height: 24, alignItems: 'center', justifyContent: 'center' }}>
       <Icon name={name} />
     </Pressable>
   );
@@ -137,7 +137,7 @@ export function LibraryScreen() {
     <Screen>
       <View style={{ flexDirection: 'row', alignItems: 'center', paddingTop: 18, paddingBottom: 10, paddingHorizontal: space[4], gap: space[4] }}>
         <Pressable accessibilityRole="header" focusable={false} onPress={() => list.current?.scrollToOffset({ offset: 0, animated: true })} style={{ flex: 1, justifyContent: 'center' }}>
-          <Text weight={600} style={{ fontSize: 17 }}>engram</Text>
+          <Text weight={600}>engram</Text>
         </Pressable>
         {selected ? (
           <Pressable accessibilityRole="button" onPress={() => setSelected(null)} hitSlop={12} style={{ justifyContent: 'center' }}>
@@ -147,8 +147,8 @@ export function LibraryScreen() {
           <>
             {iconButton('spaces', 'Spaces', () => router.push('/spaces'))}
             {iconButton(grid ? 'view-list' : 'view-grid', grid ? 'List view' : 'Grid view', () => patch('ui', { view: grid ? 'list' : 'grid' }))}
-            <Pressable accessibilityRole="button" accessibilityLabel="More" onPress={() => setMenu(true)} hitSlop={12} style={{ height: 20, justifyContent: 'center' }}>
-              <Text color="text2" style={{ fontSize: 16, lineHeight: 20, letterSpacing: 2 }}>···</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel="More" onPress={() => setMenu(true)} hitSlop={12} style={{ height: 24, justifyContent: 'center' }}>
+              <Text color="text2" style={{ fontSize: 18, lineHeight: 24, letterSpacing: 2 }}>···</Text>
             </Pressable>
           </>
         )}
@@ -202,18 +202,18 @@ export function LibraryScreen() {
           <Animated.View pointerEvents="none" style={[{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }, bandStyle]}><Fade color={c.bg} /></Animated.View>
           {paste.url ? (
             <View style={{ alignSelf: 'center', flexDirection: 'row', alignItems: 'center', paddingLeft: space[3], paddingVertical: 7, borderRadius: 8, backgroundColor: c.surface, borderWidth: 1, borderColor: c.line }}>
-              <Text size="xs" style={{ fontSize: 13 }}>Clipboard has a link — </Text>
+              <Text size="xs">Clipboard has a link — </Text>
               <Pressable accessibilityRole="button" onPress={savePaste} hitSlop={8} style={{ paddingHorizontal: space[3], justifyContent: 'center' }}>
-                <Text size="xs" weight={500} color="accent" style={{ fontSize: 13 }}>Save</Text>
+                <Text size="xs" weight={500} color="accent">Save</Text>
               </Pressable>
             </View>
           ) : null}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: space[3] }}>
-            <Animated.View style={[{ height: 46, overflow: 'hidden' }, searchStyle]}>
+            <Animated.View style={[{ height: 52, overflow: 'hidden' }, searchStyle]}>
               <Pressable
                 accessibilityRole="search"
                 onPress={() => router.push('/search')}
-                style={{ width: searchW, height: 46, borderRadius: 12, backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, justifyContent: 'center', paddingHorizontal: space[4] }}
+                style={{ width: searchW, height: 52, borderRadius: 12, backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, justifyContent: 'center', paddingHorizontal: space[4] }}
               >
                 <Text size="sm" color="text3">Search your library</Text>
               </Pressable>
@@ -222,13 +222,13 @@ export function LibraryScreen() {
               accessibilityRole="button"
               accessibilityLabel={folded.current ? 'Search or add' : 'Add'}
               onPress={() => { if (folded.current) fold(false); else router.push('/capture'); }}
-              style={({ pressed }) => ({ width: 56, height: 56, borderRadius: radius.lg, backgroundColor: c.accent, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.85 : 1 })}
+              style={({ pressed }) => ({ width: 60, height: 60, borderRadius: radius.lg, backgroundColor: c.accent, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.85 : 1 })}
             >
               <Animated.View style={[{ position: 'absolute' }, plusStyle]}>
-                <Text style={{ fontSize: 26, lineHeight: 26, color: dark ? c.bg : c.surface }}>+</Text>
+                <Text style={{ fontSize: 28, lineHeight: 28, color: dark ? c.bg : c.surface }}>+</Text>
               </Animated.View>
               <Animated.View style={[{ position: 'absolute' }, markStyle]}>
-                <Trace size={26} color={dark ? c.bg : c.surface} />
+                <Trace size={28} color={dark ? c.bg : c.surface} />
               </Animated.View>
             </Pressable>
           </View>

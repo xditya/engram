@@ -140,7 +140,7 @@ export function ShareOverlay({ intent, error, finish, open = (url) => void Linki
         style={[{ position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: c.bg, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, paddingHorizontal: space[4], paddingBottom: Math.max(insets.bottom, kb) + space[4], gap: space[3] }, sheetStyle]}
       >
         <Animated.View pointerEvents="none" style={[{ position: 'absolute', top: -(44 + 16), alignSelf: 'center', height: 44, paddingHorizontal: 22, borderRadius: 22, backgroundColor: c.text, justifyContent: 'center' }, pillStyle]}>
-          <Text weight={500} style={{ fontSize: 15, color: c.bg }}>Saved</Text>
+          <Text weight={500} size="sm" style={{ color: c.bg }}>Saved</Text>
         </Animated.View>
         <View style={{ alignSelf: 'center', width: 36, height: 4, borderRadius: 2, backgroundColor: c.line, marginVertical: space[2] }} />
 
@@ -152,7 +152,7 @@ export function ShareOverlay({ intent, error, finish, open = (url) => void Linki
                 {d.type === 'image' && intent.files?.[0] ? <Image source={{ uri: intent.files[0].path }} style={{ width: 40, height: 40 }} contentFit="cover" /> : typeGlyph}
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text size="sm" weight={500} numberOfLines={1} style={{ fontSize: 15 }}>{d.title}</Text>
+                <Text size="sm" weight={500} numberOfLines={1}>{d.title}</Text>
                 <Text size="xs" mono color={failed ? 'danger' : 'text3'} numberOfLines={1} style={{ marginTop: 2 }}>{failed ? `Couldn't save · ${failed}` : d.meta}</Text>
               </View>
             </Animated.View>
@@ -167,10 +167,10 @@ export function ShareOverlay({ intent, error, finish, open = (url) => void Linki
                   {thumb ? <Animated.View entering={FadeIn.duration(200).easing(EASE)} style={StyleSheet.absoluteFill}><Image source={{ uri: thumb }} style={{ width: 40, height: 40 }} contentFit="cover" /></Animated.View> : null}
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Animated.View key={title} entering={FadeIn.duration(200).easing(EASE)}><Text size="sm" weight={500} numberOfLines={1} style={{ fontSize: 15 }}>{title}</Text></Animated.View>
+                  <Animated.View key={title} entering={FadeIn.duration(200).easing(EASE)}><Text size="sm" weight={500} numberOfLines={1}>{title}</Text></Animated.View>
                   <Text size="xs" mono color="text3" numberOfLines={1} style={{ marginTop: 2 }}>{domain}</Text>
                 </View>
-                <Text size="xs" color="text3" style={{ fontSize: 13 }}>›</Text>
+                <Text size="xs" color="text3">›</Text>
               </Animated.View>
             </Pressable>
           </Animated.View>

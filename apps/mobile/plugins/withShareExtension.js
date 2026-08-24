@@ -11,6 +11,8 @@ const path = require('path');
 //   - without a usable container (free-account sideloads) the JS root is never mounted: the payload goes to the
 //     app in the deep link (&p=<base64url JSON>) or, for media, on the same-team named pasteboard (p=pasteboard),
 //     exactly what app/_layout.tsx and EngramDiag.takeSharedPasteboard already read;
+//   - the JS path falls back to that same hand-off when the bundle fails to load, never paints, or reports a boot
+//     error through openHostApp("handoff"), so the sheet never hangs on the spinner;
 //   - share-sheet label, host scheme (the app declares several; the extension needs one string) and the
 //     deployment target the pods are built for.
 // Mods run last-registered first, so this plugin is listed before expo-share-extension in app.config.ts and
@@ -19,6 +21,8 @@ const path = require('path');
 const PASTEBOARD = 'app.engram.share';
 const LABEL = 'Save to engram';
 const SCHEME = 'engram';
+// Seconds the JS root may take to paint before the share is handed to the app instead.
+const JS_TIMEOUT = 20;
 
 const HELPERS = `
   // Sideload support: the group may be renamed (ALTAppGroups) or absent; never assume its container exists.
@@ -34,12 +38,32 @@ const HELPERS = `
     guard let g = Bundle.main.object(forInfoDictionaryKey: "AppGroup") as? String else { return false }
     return FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: g) != nil
   }
+  // What getShareData produced, kept so a JS failure can still hand it to the app.
+  var pendingShare: [String: Any] = [:]
+  var jsPainted = false
+  var handedOff = false
+  // JS path safety net: bundle load failure, or no first paint within the timeout, hands off instead of hanging.
+  func armFallback() {
+    NotificationCenter.default.addObserver(forName: NSNotification.Name("RCTContentDidAppearNotification"), object: nil, queue: .main) { [weak self] _ in self?.jsPainted = true }
+    NotificationCenter.default.addObserver(forName: NSNotification.Name("RCTJavaScriptDidFailToLoadNotification"), object: nil, queue: .main) { [weak self] _ in
+      guard let self = self else { return }
+      self.handOff(self.pendingShare)
+    }
+    DispatchQueue.main.asyncAfter(deadline: .now() + ${JS_TIMEOUT}) { [weak self] in
+      guard let self = self, !self.jsPainted, !self.isCleanedUp else { return }
+      self.handOff(self.pendingShare)
+    }
+  }
   // No usable container: carry the share to the app. URL/text ride in the link; media goes through the pasteboard.
+  // Runs on the main thread (getShareData completes there; the observers above are queued there).
   func handOff(_ shared: [String: Any]) {
+    if handedOff { return }
+    handedOff = true
     var payload = ""
     let media = ["images", "videos", "files"].flatMap { shared[$0] as? [String] ?? [] }
     if !media.isEmpty {
       if let pb = UIPasteboard(name: UIPasteboard.Name("${PASTEBOARD}"), create: true) {
+        // The bytes themselves: the app cannot read this process's sandbox. The file name carries the type hint.
         pb.items = media.compactMap { p -> [String: Any]? in
           let url = p.hasPrefix("file:") ? URL(string: p) : URL(fileURLWithPath: p)
           guard let u = url, let data = try? Data(contentsOf: u) else { return nil }
@@ -51,14 +75,31 @@ const HELPERS = `
       var json: [String: String] = [:]
       if let u = shared["url"] as? String { json["webUrl"] = u }
       if let t = shared["text"] as? String { json["text"] = String(t.prefix(4000)) }
-      guard let d = try? JSONSerialization.data(withJSONObject: json), let s = String(data: d, encoding: .utf8) else { close(); return }
+      guard let d = try? JSONSerialization.data(withJSONObject: json), let s = String(data: d, encoding: .utf8) else { finish(opening: nil); return }
       payload = s
     }
     let p = Data(payload.utf8).base64EncodedString()
       .replacingOccurrences(of: "+", with: "-").replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "=", with: "")
     let scheme = Bundle.main.object(forInfoDictionaryKey: "HostAppScheme") as? String ?? "${SCHEME}"
-    if let url = URL(string: "\\(scheme)://dataUrl=share?nonce=\\(Int(Date().timeIntervalSince1970))&p=\\(p)") { openURL(url) }
-    close()
+    finish(opening: URL(string: "\\(scheme)://dataUrl=share?nonce=\\(Int(Date().timeIntervalSince1970))&p=\\(p)"))
+  }
+  // Open the app, then end the request exactly once, after the open call has been made. extensionContext.open
+  // is the sanctioned route; where it declines (share extensions on most iOS versions) the responder chain is used.
+  func finish(opening url: URL?) {
+    DispatchQueue.main.async { [weak self] in
+      guard let self = self else { return }
+      let done = {
+        self.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
+        self.cleanupAfterClose()
+      }
+      guard let url = url, let ctx = self.extensionContext else { done(); return }
+      ctx.open(url) { ok in
+        DispatchQueue.main.async {
+          if !ok { self.openURL(url) }
+          done()
+        }
+      }
+    }
   }
 `;
 
@@ -72,12 +113,15 @@ function rewrite(src) {
     if (n !== times) throw new Error(`[withShareExtension] pattern "${label}" matched ${n} times, expected ${times}`);
     s = s.replace(re, replacement);
   };
-  must(/^import React\n/m, 'import React\nimport Expo\n', 'imports');
+  // ExpoModulesProvider.swift in this target imports Expo as `internal`; a plain import elsewhere is an error under Swift 6.
+  must(/^import React\n/m, 'import React\ninternal import Expo\n', 'imports');
   must(/class ReactNativeDelegate: RCTDefaultReactNativeFactoryDelegate \{/, 'class ReactNativeDelegate: ExpoReactNativeFactoryDelegate {', 'delegate base');
   must(/RCTReactNativeFactory\(delegate: reactNativeFactoryDelegate!\)/, 'ExpoReactNativeFactory(delegate: reactNativeFactoryDelegate!)', 'factory');
   must(/(  private var isCleanedUp = false\n)/, `$1${HELPERS}`, 'helpers');
   must(/(\n\s*)(reactNativeFactoryDelegate = ReactNativeDelegate\(\))/,
-    (_, ws, line) => `${ws}if !self.canSaveInExtension { self.handOff(sharedData ?? [:]); return }${ws}${line}`, 'hand-off gate');
+    (_, ws, line) => `${ws}self.pendingShare = sharedData ?? [:]${ws}if !self.canSaveInExtension { self.handOff(self.pendingShare); return }${ws}self.armFallback()${ws}${line}`, 'hand-off gate');
+  // JS reports a boot failure (no database, no container) through openHostApp("handoff").
+  must(/(private func openHostApp\(path: String\?\) \{\n)/, '$1    if path == "handoff" { handOff(pendingShare); return }\n', 'handoff path');
   must(GROUP_GUARD, 'let containerUrl = self.mediaDirectory', 'group guards', 3);
   return s;
 }
@@ -98,14 +142,17 @@ module.exports = (config) => {
     const name = targetName(c);
     const file = path.join(c.modRequest.platformProjectRoot, name, 'ShareExtensionViewController.swift');
     fs.writeFileSync(file, rewrite(fs.readFileSync(file, 'utf8')));
-    // The pods are built for the app's deployment target (expo-build-properties); the extension must match.
+    // The pods are built for the app's deployment target (expo-build-properties); the extension must match, or Swift
+    // refuses to import modules built for a newer OS than the target.
     const deploymentTarget = (config.plugins ?? []).map((p) => (Array.isArray(p) ? p : [p])).find(([n]) => n === 'expo-build-properties')?.[1]?.ios?.deploymentTarget;
     if (deploymentTarget) {
       const configs = c.modResults.hash.project.objects.XCBuildConfiguration;
+      let patched = 0;
       for (const key of Object.keys(configs)) {
         const bs = configs[key].buildSettings;
-        if (bs && bs.PRODUCT_NAME === `"${name}"`) bs.IPHONEOS_DEPLOYMENT_TARGET = `"${deploymentTarget}"`;
+        if (bs && bs.PRODUCT_NAME === `"${name}"`) { bs.IPHONEOS_DEPLOYMENT_TARGET = `"${deploymentTarget}"`; patched++; }
       }
+      if (!patched) throw new Error(`[withShareExtension] no build configuration for ${name}; deployment target not set`);
     }
     return c;
   });

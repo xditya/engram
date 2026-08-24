@@ -39,7 +39,7 @@ export default function SpaceScreen() {
         <Pressable accessibilityLabel="Back" accessibilityRole="button" onPress={() => router.back()} style={iconBtn}>
           <Text size="lg" color="text2">‹</Text>
         </Pressable>
-        <Text weight={600} numberOfLines={1} style={{ fontSize: 17, flex: 1 }}>{data?.space.name ?? ''}</Text>
+        <Text weight={600} numberOfLines={1} style={{ flex: 1 }}>{data?.space.name ?? ''}</Text>
         <Pressable accessibilityLabel={view === 'grid' ? 'Show as list' : 'Show as grid'} accessibilityRole="button" onPress={() => patch('ui', { view: view === 'grid' ? 'list' : 'grid' })} style={iconBtn}>
           <Icon name={view === 'grid' ? 'view-list' : 'view-grid'} />
         </Pressable>

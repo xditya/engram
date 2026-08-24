@@ -14,7 +14,7 @@ export function Header({ title, back = true }: { title?: string; back?: boolean 
           <Text size="xl" color="text2">‹</Text>
         </Pressable>
       ) : <View style={{ width: 44 }} />}
-      {title ? <Text weight={600} style={{ fontSize: 17 }}>{title}</Text> : null}
+      {title ? <Text weight={600}>{title}</Text> : null}
     </View>
   );
 }

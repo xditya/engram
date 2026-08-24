@@ -13,9 +13,9 @@ export function Page({ title, children }: { title: string; children: ReactNode }
     <Screen>
       <View style={{ flexDirection: 'row', alignItems: 'center', height: 52, paddingHorizontal: space[2] }}>
         <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => router.back()} hitSlop={8} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
-          <Text size="sm" color="text2" style={{ fontSize: 15 }}>‹</Text>
+          <Text size="sm" color="text2">‹</Text>
         </Pressable>
-        <Text weight={600} style={{ fontSize: 17 }}>{title}</Text>
+        <Text weight={600}>{title}</Text>
       </View>
       <ScrollView contentContainerStyle={{ paddingHorizontal: space[3], paddingBottom: space[7], gap: space[5] }} keyboardShouldPersistTaps="handled">
         {children}
@@ -43,8 +43,8 @@ export function ToggleRow({ title, subtitle, value, onChange, disabled }: { titl
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 13, gap: space[3], opacity: disabled ? 0.4 : 1 }}>
       <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 15 }}>{title}</Text>
-        {subtitle ? <Text size="xs" color="text2" style={{ fontSize: 13 }}>{subtitle}</Text> : null}
+        <Text size="sm">{title}</Text>
+        {subtitle ? <Text size="xs" color="text2">{subtitle}</Text> : null}
       </View>
       <Switch value={value} onValueChange={onChange} disabled={disabled} trackColor={{ true: c.accent, false: c.surface2 }} accessibilityLabel={title} />
     </View>
@@ -57,8 +57,8 @@ export function RadioRow({ title, subtitle, selected, onPress }: { title: string
   return (
     <Pressable accessibilityRole="radio" accessibilityState={{ selected }} onPress={onPress} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 13, gap: space[3] }}>
       <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 15 }}>{title}</Text>
-        {subtitle ? <Text size="xs" color="text2" style={{ fontSize: 13 }}>{subtitle}</Text> : null}
+        <Text size="sm">{title}</Text>
+        {subtitle ? <Text size="xs" color="text2">{subtitle}</Text> : null}
       </View>
       <Text color="accent" style={{ opacity: selected ? 1 : 0 }}>✓</Text>
     </Pressable>
@@ -66,7 +66,7 @@ export function RadioRow({ title, subtitle, selected, onPress }: { title: string
 }
 
 // Large radio card (the Intelligence chooser). Accent outline when selected; children show only then.
-export function RadioCard({ title, body, selected, onPress, badge, children }: { title: string; body: string; selected: boolean; onPress: () => void; badge?: string; children?: ReactNode }) {
+export function RadioCard({ title, body, selected, onPress, badge, expanded, children }: { title: string; body: string; selected: boolean; onPress: () => void; badge?: string; expanded?: boolean; children?: ReactNode }) {
   const { c, space } = useTheme();
   return (
     <Pressable accessibilityRole="radio" accessibilityState={{ selected }} onPress={onPress} style={{ backgroundColor: selected ? c.accentSoft : c.surface, borderRadius: 14, padding: space[4], gap: space[2] }}>
@@ -76,7 +76,7 @@ export function RadioCard({ title, body, selected, onPress, badge, children }: {
         {badge ? <Text size="xs" mono color="text3">{badge}</Text> : null}
       </View>
       {body ? <Text size="sm" color="text2">{body}</Text> : null}
-      {selected && children ? <View style={{ gap: space[3], paddingTop: space[2] }}>{children}</View> : null}
+      {(selected || expanded) && children ? <View style={{ gap: space[3], paddingTop: space[2] }}>{children}</View> : null}
     </Pressable>
   );
 }

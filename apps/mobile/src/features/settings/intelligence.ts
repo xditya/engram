@@ -39,10 +39,13 @@ export async function checkKey(s: IntelligenceSettings, apiKey: string): Promise
 }
 
 // Saves never tagged by Intelligence, and what a backfill would cost with the current provider.
-export function backfill(e: Engram): { count: number; usd: number; seconds?: number; queued: number } {
+// "Untagged" means no classify job has finished for the item: autotag also writes source 'ai', so tag rows can't tell.
+const UNTAGGED = "deleted_at IS NULL AND id NOT IN (SELECT item_id FROM jobs WHERE kind = 'classify' AND status = 'done')";
+
+export function backfill(e: Engram, all = false): { count: number; usd: number; seconds?: number; queued: number } {
   const sql = e.platform.db;
   const row = sql.query<{ n: number; chars: number }>(
-    "SELECT count(*) n, coalesce(avg(length(coalesce(title,'')) + length(coalesce(body,''))), 0) chars FROM items WHERE deleted_at IS NULL AND id NOT IN (SELECT item_id FROM tags WHERE source = 'ai' AND deleted_at IS NULL)",
+    `SELECT count(*) n, coalesce(avg(length(coalesce(title,'')) + length(coalesce(body,''))), 0) chars FROM items WHERE ${all ? 'deleted_at IS NULL' : UNTAGGED}`,
   )[0] ?? { n: 0, chars: 0 };
   const queued = sql.query<{ n: number }>("SELECT count(*) n FROM jobs WHERE kind = 'classify' AND status IN ('pending','running')")[0]?.n ?? 0;
   return { count: row.n, queued, ...estimate(row.n, row.chars) };
@@ -54,10 +57,10 @@ export function estimate(count: number, avgChars: number): { usd: number; second
   return ai.estimateCost(count, Math.round(avgChars) + 400, provider, modelOf(s));
 }
 
-// Enqueue classify + embed for every untagged save. Never called automatically.
-export function startBackfill(e: Engram): number {
+// Enqueue classify + embed for every untagged save (or every save). Never called automatically.
+export function startBackfill(e: Engram, all = false): number {
   const ids = e.platform.db.query<{ id: string }>(
-    "SELECT id FROM items WHERE deleted_at IS NULL AND id NOT IN (SELECT item_id FROM tags WHERE source = 'ai' AND deleted_at IS NULL) AND id NOT IN (SELECT item_id FROM jobs WHERE kind = 'classify' AND status IN ('pending','running'))",
+    `SELECT id FROM items WHERE ${all ? 'deleted_at IS NULL' : UNTAGGED} AND id NOT IN (SELECT item_id FROM jobs WHERE kind = 'classify' AND status IN ('pending','running'))`,
   );
   for (const { id } of ids) e.queue.enqueueFor(id, ['classify', 'embed']);
   void e.drain();

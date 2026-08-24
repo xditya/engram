@@ -33,7 +33,7 @@ export default function Spaces() {
         <Pressable accessibilityLabel="Back" accessibilityRole="button" onPress={() => router.back()} style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
           <Text size="lg" color="text2">‹</Text>
         </Pressable>
-        <Text weight={600} style={{ fontSize: 17, flex: 1 }}>Spaces</Text>
+        <Text weight={600} style={{ flex: 1 }}>Spaces</Text>
         {data?.spaces.length ? (
           <Pressable accessibilityRole="button" onPress={() => setCreating(true)} style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: space[2] }}>
             <Text size="sm" weight={500} color="accent">New Space</Text>

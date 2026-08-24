@@ -57,7 +57,7 @@ export default function Phrase() {
       <Header />
       <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: space[6] }}>
         <Text weight={600} style={{ fontSize: 26, lineHeight: 32, marginTop: 18 }}>Your recovery phrase</Text>
-        <Text color="text2" style={{ fontSize: 15, lineHeight: 22, marginTop: 10, marginBottom: 22 }}>This is the only way into your library on a new device if this one is lost.</Text>
+        <Text color="text2" size="sm" style={{ lineHeight: 22, marginTop: 10, marginBottom: 22 }}>This is the only way into your library on a new device if this one is lost.</Text>
 
         <View
           accessible
@@ -71,7 +71,7 @@ export default function Phrase() {
             </View>
           ))}
         </View>
-        <Text color="text2" style={{ fontSize: 13, lineHeight: 19, marginTop: 14 }}>Anyone with these words can read your library. engram never sees them.</Text>
+        <Text color="text2" size="xs" style={{ lineHeight: 19, marginTop: 14 }}>Anyone with these words can read your library. engram never sees them.</Text>
 
         <View style={{ gap: space[3], marginTop: 22 }}>
           {saved ? (

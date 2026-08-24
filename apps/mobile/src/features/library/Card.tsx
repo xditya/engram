@@ -36,8 +36,8 @@ export function Card({ entry, width, selecting, selected, showTrace, fresh, onPr
   const inset = uri
     ? <Image source={{ uri }} style={{ width: width - pad * 2, height: 84, borderRadius: radius.sm, backgroundColor: c.surface2, marginBottom: 4 }} contentFit="cover" accessibilityIgnoresInvertColors />
     : null;
-  const domain = item.domain ? <Text size="xs" mono color="text3" numberOfLines={1} style={{ fontSize: 11 }}>{item.domain}</Text> : null;
-  const title = (t: string) => <Text size="sm" weight={500} numberOfLines={2} style={{ lineHeight: 18 }}>{t}</Text>;
+  const domain = item.domain ? <Text size="xs" mono color="text3" numberOfLines={1}>{item.domain}</Text> : null;
+  const title = (t: string) => <Text size="md" weight={500} numberOfLines={2}>{t}</Text>;
 
   let body: ReactNode;
   switch (item.type) {
@@ -47,7 +47,7 @@ export function Card({ entry, width, selecting, selected, showTrace, fresh, onPr
     case 'note':
       body = (
         <View style={{ paddingHorizontal: pad, paddingTop: pad, paddingBottom: bottom }}>
-          <Text size="sm" lineHeight="body" numberOfLines={6} style={{ fontSize: 13 }}>{item.body ?? item.title ?? ''}</Text>
+          <Text size="sm" lineHeight="body" numberOfLines={6}>{item.body ?? item.title ?? ''}</Text>
           <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, bottom: bottom, height: 18 }}><Fade color={c.surface} solidAt={1} /></View>
         </View>
       );
@@ -56,8 +56,8 @@ export function Card({ entry, width, selecting, selected, showTrace, fresh, onPr
       body = (
         <View style={{ paddingHorizontal: pad, paddingTop: pad, paddingBottom: bottom }}>
           <Text weight={600} style={{ fontSize: 24, lineHeight: 16 }}>{'“'}</Text>
-          <Text size="sm" style={{ lineHeight: 20, marginTop: 6 }}>{item.body ?? item.title ?? ''}</Text>
-          {item.domain || item.title ? <Text size="xs" mono color="text3" numberOfLines={1} style={{ fontSize: 11, marginTop: 6 }}>{item.domain ?? item.title}</Text> : null}
+          <Text size="sm" style={{ marginTop: 6 }}>{item.body ?? item.title ?? ''}</Text>
+          {item.domain || item.title ? <Text size="xs" mono color="text3" numberOfLines={1} style={{ marginTop: 6 }}>{item.domain ?? item.title}</Text> : null}
         </View>
       );
       break;
@@ -79,8 +79,8 @@ export function Card({ entry, width, selecting, selected, showTrace, fresh, onPr
           {img}
           <View style={{ paddingHorizontal: pad, paddingTop: pad, paddingBottom: bottom, gap: 6 }}>
             {item.title ? title(item.title) : null}
-            <Text size="xs" mono color="text3" numberOfLines={1} style={{ fontSize: 11 }}>
-              {typeof meta.price === 'string' || typeof meta.price === 'number' ? <Text size="xs" mono style={{ fontSize: 11 }}>{String(meta.price)}{item.domain ? ' · ' : ''}</Text> : null}
+            <Text size="xs" mono color="text3" numberOfLines={1}>
+              {typeof meta.price === 'string' || typeof meta.price === 'number' ? <Text size="xs" mono>{String(meta.price)}{item.domain ? ' · ' : ''}</Text> : null}
               {item.domain}
             </Text>
           </View>

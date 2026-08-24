@@ -70,7 +70,7 @@ function Row({ space: s, meta, row, order, onOpen, onReorder }: {
           style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: sp[3], paddingHorizontal: sp[4], backgroundColor: c.surface, borderRadius: radius.md }}
         >
           <View style={{ flex: 1, gap: 2 }}>
-            <Text size="sm" weight={500} numberOfLines={1} style={{ fontSize: 15 }}>{s.name}</Text>
+            <Text size="sm" weight={500} numberOfLines={1}>{s.name}</Text>
             <Text size="xs" mono color="text3" numberOfLines={1}>{s.query?.trim() || 'no query'}</Text>
           </View>
           <Text size="xs" mono color="text3">{meta?.count ?? 0}</Text>

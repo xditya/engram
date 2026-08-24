@@ -27,10 +27,10 @@ function Reader({ item }: { item: Item }) {
       <Text size="xxl" weight={600} style={{ fontSize: 26 }} accessibilityRole="header">{item.title ?? domain}</Text>
       <Text size="xs" mono color="text3" style={{ marginTop: 10 }}>{domain} · {readingMinutes(item.body)} min</Text>
       {item.body ? (
-        <Text lineHeight="reader" style={{ fontSize: 17, marginTop: 22 }}>{item.body}</Text>
+        <Text lineHeight="reader" style={{ marginTop: 22 }}>{item.body}</Text>
       ) : (
         <View style={{ marginTop: space[5], gap: space[3] }}>
-          {item.summary ? <Text lineHeight="reader" style={{ fontSize: 17 }}>{item.summary}</Text> : null}
+          {item.summary ? <Text lineHeight="reader">{item.summary}</Text> : null}
           <Text size="sm" color="text2">
             Only the preview could be saved. <Text size="sm" color="accent" onPress={() => openOriginal(item.url)}>Open original.</Text>
           </Text>
@@ -68,8 +68,8 @@ function Quote({ item }: { item: Item }) {
   return (
     <ScrollView contentContainerStyle={{ flexGrow: 1, paddingHorizontal: space[6], paddingTop: '18%', paddingBottom: 120, alignItems: 'center' }}>
       <View style={{ flexDirection: 'row', paddingLeft: 14 }}>
-        <Text size="xl" weight={500} style={{ fontSize: 24, lineHeight: 32, marginLeft: -14, width: 14 }}>{'“'}</Text>
-        <Text size="xl" weight={500} style={{ fontSize: 24, lineHeight: 32, textAlign: 'center', flexShrink: 1 }}>{body}</Text>
+        <Text size="xl" weight={500} style={{ lineHeight: 32, marginLeft: -14, width: 14 }}>{'“'}</Text>
+        <Text size="xl" weight={500} style={{ lineHeight: 32, textAlign: 'center', flexShrink: 1 }}>{body}</Text>
       </View>
       {item.title && item.body ? <Text size="sm" color="text2" style={{ marginTop: space[4], textAlign: 'center' }}>{item.title}</Text> : null}
       {item.domain ? <Text size="xs" mono color="accent" onPress={() => openOriginal(item.url)} style={{ marginTop: space[2] }}>{item.domain}</Text> : null}

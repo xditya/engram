@@ -26,6 +26,8 @@ export function ShareExtensionRoot(props: InitialProps) {
   });
   useEffect(() => { void bootWith(createEngramLite); }, []);
   const { engram, error } = useBootState();
+  // No database after all (container gone, migration failed): the Swift side carries the share to the app instead.
+  useEffect(() => { if (error) openHostApp('handoff'); }, [error]);
   if (!(loaded || fontError) || !(engram || error)) return null;
   const files = [...(props.images ?? []), ...(props.videos ?? []), ...(props.files ?? [])].map((path) => ({ path }));
   const intent = { webUrl: props.url ?? null, text: props.text ?? null, files: files.length ? files : null };

@@ -106,9 +106,25 @@ jobs:
           echo "scheme=$SCHEME" >> "$GITHUB_OUTPUT"
           echo "Building workspace=$WORKSPACE scheme=$SCHEME"
 
-      - name: Build Unsigned Archive
+      - name: Check the Swift rewrite (Expo factory + sideload hand-off) landed in the generated project
+        # Before the archive: a bad rewrite fails here in seconds instead of half an hour in.
         working-directory: ${{ env.APP_DIR }}
         run: |
+          node plugins/check.js
+          SWIFT=$(ls ios/*ShareExtension/ShareExtensionViewController.swift)
+          for m in "import Expo" "ExpoReactNativeFactory(delegate:" "ALTAppGroups" "func handOff(" "func finish(opening" "app.engram.share"; do
+            grep -q -- "$m" "$SWIFT" || { echo "::error::share extension was not rewritten: missing '$m'"; exit 1; }
+          done
+          if grep -q "Could not find AppGroup in info.plist" "$SWIFT"; then echo "::error::an early-return group guard survived the rewrite"; exit 1; fi
+          grep -q '<string>engram</string>' ios/*ShareExtension/Info.plist || { echo "::error::HostAppScheme is not the single 'engram' scheme"; exit 1; }
+          echo "Extension build settings (deployment target must match the pods):"
+          grep -n "IPHONEOS_DEPLOYMENT_TARGET\|PRODUCT_NAME = \"engramShareExtension\"" ios/*.xcodeproj/project.pbxproj
+
+      - name: Build Unsigned Archive
+        working-directory: ${{ env.APP_DIR }}
+        # Full log kept for the failure artifact; the console only gets the tail plus every error line.
+        run: |
+          mkdir -p build
           xcodebuild \
             -workspace "${{ steps.scheme.outputs.workspace }}" \
             -scheme "${{ steps.scheme.outputs.scheme }}" \
@@ -121,7 +137,16 @@ jobs:
             CODE_SIGN_ENTITLEMENTS="" \
             COMPILER_INDEX_STORE_ENABLE=NO \
             -parallelizeTargets \
-            archive
+            archive > build/xcodebuild.log 2>&1 || { tail -n 200 build/xcodebuild.log; echo "---- error lines ----"; grep -n "error:" build/xcodebuild.log | head -n 100; exit 1; }
+          tail -n 20 build/xcodebuild.log
+
+      - name: Upload xcodebuild log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcodebuild-log
+          path: ${{ env.APP_DIR }}/build/xcodebuild.log
+          if-no-files-found: ignore
 
       - name: Check the share extension is embedded
         # The share sheet entry lives in PlugIns/<name>.appex. Exactly one: expo-share-intent is Android-only
@@ -138,17 +163,6 @@ jobs:
           [ -f "$APPEX/main.jsbundle" ] || { echo "::error::Share extension has no JS bundle (index.share.js was not bundled)"; exit 1; }
           echo "Activation rules:"
           plutil -p "$APPEX/Info.plist" | grep -A12 NSExtensionAttributes
-
-      - name: Check the Swift rewrite (Expo factory + sideload hand-off) is compiled in
-        working-directory: ${{ env.APP_DIR }}
-        run: |
-          node plugins/check.js
-          SWIFT=$(ls ios/*ShareExtension/ShareExtensionViewController.swift)
-          for m in "import Expo" "ExpoReactNativeFactory(delegate:" "ALTAppGroups" "func handOff(" "app.engram.share"; do
-            grep -q -- "$m" "$SWIFT" || { echo "::error::share extension was not rewritten: missing '$m'"; exit 1; }
-          done
-          if grep -q "Could not find AppGroup in info.plist" "$SWIFT"; then echo "::error::an early-return group guard survived the rewrite"; exit 1; fi
-          grep -q '<string>engram</string>' ios/*ShareExtension/Info.plist || { echo "::error::HostAppScheme is not the single 'engram' scheme"; exit 1; }
 
       - name: Package into .ipa
         working-directory: ${{ env.APP_DIR }}

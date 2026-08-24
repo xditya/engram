@@ -168,8 +168,8 @@ function Status() {
       <View style={{ backgroundColor: c.surface, borderRadius: radius.md, overflow: 'hidden' }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', minHeight: 56, paddingHorizontal: space[4], paddingVertical: space[3], gap: space[3] }}>
           <View style={{ flex: 1 }}>
-            <Text size="sm" style={{ fontSize: 15 }}>Keep originals offline</Text>
-            <Text size="xs" color="text2" style={{ fontSize: 13 }}>Download full-size files from other devices over any connection.</Text>
+            <Text size="sm">Keep originals offline</Text>
+            <Text size="xs" color="text2">Download full-size files from other devices over any connection.</Text>
           </View>
           <Switch
             accessibilityLabel="Keep originals offline"

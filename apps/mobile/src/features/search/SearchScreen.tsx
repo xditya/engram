@@ -17,7 +17,7 @@ function OpChip({ label, onPress }: { label: string; onPress: () => void }) {
   const { c } = useTheme();
   return (
     <Pressable accessibilityRole="button" onPress={onPress} hitSlop={6} style={{ minHeight: 32, paddingHorizontal: 10, justifyContent: 'center', backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, borderRadius: 7 }}>
-      <Text size="xs" mono style={{ fontSize: 13 }}>{label}</Text>
+      <Text size="xs" mono>{label}</Text>
     </Pressable>
   );
 }
@@ -63,7 +63,7 @@ export function SearchScreen() {
           return (
             <Pressable key={`${ch}${i}`} accessibilityRole="button" accessibilityLabel={`Remove ${ch}`} hitSlop={8} onPress={() => setChips((cs) => cs.filter((_, j) => j !== i))}
               style={{ paddingHorizontal: 6, height: 26, justifyContent: 'center', alignSelf: 'center', borderRadius: 6, backgroundColor: op ? c.accentSoft : 'transparent' }}>
-              <Text size="xs" mono style={{ fontSize: 13 }} color={op ? 'accent' : 'text'}>{ch}</Text>
+              <Text size="xs" mono color={op ? 'accent' : 'text'}>{ch}</Text>
             </Pressable>
           );
         })}

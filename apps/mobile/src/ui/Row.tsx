@@ -1,22 +1,27 @@
+import type { ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
 import { useTheme } from '../theme/useTheme';
 import { Text } from './Text';
 
-// Settings row: title, optional subtitle, right-aligned mono value, chevron when pressable.
-export function Row({ title, subtitle, value, onPress }: { title: string; subtitle?: string; value?: string; onPress?: () => void }) {
+// Settings row: title with the mono value and chevron on the same line, subtitle full-width beneath so a long
+// subtitle never squeezes the value into a narrow column. `left` is an optional leading glyph.
+export function Row({ title, subtitle, value, onPress, left }: { title: string; subtitle?: string; value?: string; onPress?: () => void; left?: ReactNode }) {
   const { c, space } = useTheme();
   return (
     <Pressable
       accessibilityRole={onPress ? 'button' : undefined}
       onPress={onPress}
-      style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 13, gap: space[3] }}
+      style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', paddingHorizontal: space[4], paddingVertical: 13, gap: space[3], backgroundColor: pressed && onPress ? c.surface2 : 'transparent' })}
     >
-      <View style={{ flex: 1 }}>
-        <Text size="sm" style={{ fontSize: 15 }}>{title}</Text>
-        {subtitle ? <Text size="xs" color="text2" style={{ fontSize: 13 }}>{subtitle}</Text> : null}
+      {left ? <View style={{ width: 24, alignItems: 'center' }}>{left}</View> : null}
+      <View style={{ flex: 1, gap: 2 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[3] }}>
+          <Text size="sm" style={{ flex: 1 }}>{title}</Text>
+          {value ? <Text size="xs" mono color="text3">{value}</Text> : null}
+          {onPress ? <Text size="xs" color="text3">›</Text> : null}
+        </View>
+        {subtitle ? <Text size="xs" color="text2">{subtitle}</Text> : null}
       </View>
-      {value ? <Text size="xs" mono color="text3">{value}</Text> : null}
-      {onPress ? <Text size="xs" color="text3" style={{ fontSize: 13 }}>›</Text> : null}
     </Pressable>
   );
 }

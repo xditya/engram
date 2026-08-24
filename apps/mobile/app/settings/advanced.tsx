@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert } from 'react-native';
+import { Alert, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { DEFAULTS } from '../../src/lib/settings';
 import { useEngram, useSettings, useToast } from '../../src/lib/engram';
@@ -17,11 +17,11 @@ export default function Advanced() {
   const retag = () => {
     if (!engram) return;
     if (s.intelligence.mode === 'off') { show('Turn on Intelligence first'); return; }
-    const b = backfill(engram);
-    if (!b.count) { show('Everything is already tagged'); return; }
-    Alert.alert(`Tag ${n(b.count)} saves`, costLine(b.usd, b.seconds, modelOf(s.intelligence)), [
+    const b = backfill(engram, true);
+    if (!b.count) { show('Nothing to tag yet'); return; }
+    Alert.alert(`Re-tag ${n(b.count)} saves`, `${costLine(b.usd, b.seconds, modelOf(s.intelligence))}. Tags you added stay.`, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Tag', onPress: () => show(`Queued ${n(startBackfill(engram))}`) },
+      { text: 'Re-tag', onPress: () => { const q = startBackfill(engram, true); show(b.queued ? `Queued ${n(q)} · ${n(b.queued)} already waiting` : `Queued ${n(q)}`); } },
     ]);
   };
 
@@ -55,13 +55,13 @@ export default function Advanced() {
   return (
     <Page title="Advanced">
       <Group label="Google">
-        <Field label="Own Google OAuth client ID" placeholder="…apps.googleusercontent.com" value={clientId} onChangeText={setClientId} onBlur={() => s.patch('advanced', { googleClientId: clientId.trim() || undefined })} />
+        <View style={{ padding: 12 }}><Field label="Own Google OAuth client ID" placeholder="…apps.googleusercontent.com" value={clientId} onChangeText={setClientId} onBlur={() => s.patch('advanced', { googleClientId: clientId.trim() || undefined })} /></View>
       </Group>
       <Group label="Sync">
         <Row title="WebDAV…" subtitle="Nextcloud, a NAS, your own host" onPress={() => router.push('/settings/sync' as never)} />
       </Group>
       <Group label="Library">
-        <Row title="Re-tag library" subtitle="Runs Intelligence over saves that have no tags yet" onPress={retag} />
+        <Row title="Re-tag library" subtitle="Runs Intelligence over every save again" onPress={retag} />
         <Row title="Rebuild thumbnails" onPress={rebuildThumbs} />
       </Group>
       <Group label="Diagnostics">

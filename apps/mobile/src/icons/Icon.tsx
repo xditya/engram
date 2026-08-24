@@ -66,7 +66,7 @@ const icons = {
 export type IconName = keyof typeof icons;
 
 // Glyphs are stroke="currentColor"; `color` tints them. Defaults to text2, the chrome icon colour.
-export function Icon({ name, size = 20, color }: { name: IconName; size?: number; color?: string }) {
+export function Icon({ name, size = 22, color }: { name: IconName; size?: number; color?: string }) {
   const { c } = useTheme();
   const Glyph = icons[name];
   return <Glyph width={size} height={size} color={color ?? c.text2} />;

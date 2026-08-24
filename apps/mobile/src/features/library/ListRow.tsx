@@ -25,13 +25,13 @@ export function ListRow({ entry, dense, selecting, selected, onPress, onLongPres
         <Image source={{ uri }} style={{ width: size, height: size, borderRadius: 8, backgroundColor: c.surface2 }} contentFit="cover" cachePolicy="memory-disk" transition={120} accessibilityIgnoresInvertColors />
       ) : (
         <View style={{ width: size, height: size, borderRadius: 8, backgroundColor: c.surface2, alignItems: 'center', justifyContent: 'center' }}>
-          <Icon name={typeIcon(item.type)} size={18} />
+          <Icon name={typeIcon(item.type)} size={20} />
         </View>
       )}
       <View style={{ flex: 1 }}>
         <Text size="sm" weight={500} numberOfLines={1}>{item.title ?? item.body?.split('\n')[0] ?? item.url ?? 'Untitled'}</Text>
         <Text size="xs" color="text2" numberOfLines={1}>
-          {item.domain ? `${item.domain} · ` : ''}<Text size="xs" mono color="text2" style={{ fontSize: 11 }}>{shortDate(item.created_at)}</Text>
+          {item.domain ? `${item.domain} · ` : ''}<Text size="xs" mono color="text2">{shortDate(item.created_at)}</Text>
         </Text>
       </View>
       {selecting ? (
@@ -39,7 +39,7 @@ export function ListRow({ entry, dense, selecting, selected, onPress, onLongPres
           {selected ? <Text size="xs" weight={600} style={{ color: dark ? c.bg : '#FFFFFF' }}>{'✓'}</Text> : null}
         </View>
       ) : (
-        <Icon name={typeIcon(item.type)} size={16} color={c.text3} />
+        <Icon name={typeIcon(item.type)} size={18} color={c.text3} />
       )}
     </Pressable>
   );

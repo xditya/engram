@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Linking, Pressable, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { ai, type IntelligenceSettings } from '@engram/core';
-import { createOnDevice, onDeviceTier } from '../../src/platform/onDevice';
+import { onDeviceLastError, onDeviceTier, setOnDeviceProgress } from '../../src/platform/onDevice';
 import { useEngram, useLiveQuery, useSettings, useToast } from '../../src/lib/engram';
 import {
   KEY_PAGES, backfill, checkKey, costLine, hostOf, modelOf, startBackfill, stopBackfill, type Check, type KeyProvider,
@@ -34,17 +34,20 @@ export default function Intelligence() {
   const offered = !!engram && !engram.onDeviceReason;
   const [dl, setDl] = useState<{ llm: number; embed: number } | null>(null);
   const [ready, setReady] = useState(false);
+  // Drives the app-wide instance (the one jobs use), so a finished download is immediately usable and never repeated.
   const download = async () => {
-    const od = createOnDevice((what, f) => setDl((d) => ({ llm: 0, embed: 0, ...d, [what]: f })));
+    const od = engram?.platform.onDevice;
     if (!od) return;
+    setOnDeviceProgress((what, f) => setDl((d) => ({ llm: 0, embed: 0, ...d, [what]: f })));
     setDl({ llm: 0, embed: 0 });
     const ok = await od.ready();
+    setOnDeviceProgress(undefined);
     setDl(null);
     setReady(ok);
-    if (ok) set({ mode: 'on-device', summaries: false });
-    else show("Couldn't download the model. Try again on Wi-Fi.");
+    if (ok) { set({ mode: 'on-device', summaries: false }); engram!.queue.reenqueueSkipped(); void engram!.drain(); }
+    else show(`Couldn't download the model: ${onDeviceLastError() ?? 'unknown error'}`);
   };
-  // Loading the app-wide instance is what lets skipped jobs run again (the download above was a separate instance).
+  useEffect(() => () => setOnDeviceProgress(undefined), []);
   useEffect(() => {
     if (s.mode !== 'on-device' || !offered) return;
     void engram!.platform.onDevice!.ready().then((ok) => { setReady(ok); if (ok) { engram!.queue.reenqueueSkipped(); void engram!.drain(); } });
@@ -59,20 +62,26 @@ export default function Intelligence() {
   const [models, setModels] = useState<{ chat: string; embed: string; base: string }>({ chat: s.chatModel ?? '', embed: s.embedModel ?? '', base: s.baseUrl ?? '' });
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const gen = useRef(0); // a check that finished after the provider or key changed must not land
-  useEffect(() => { if (engram) setKey(engram.secrets.get('apiKey') ?? ''); }, [engram]);
+  useEffect(() => {
+    if (!engram) return;
+    const k = engram.secrets.get('apiKey') ?? '';
+    setKey(k);
+    if (s.mode === 'key' && (k || (!needsKey && s.baseUrl))) runCheck(k, s, true);
+  }, [engram]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const needsKey = seg !== 'custom' || (s.provider ? s.provider in ai.PRESETS && ai.PRESETS[s.provider as keyof typeof ai.PRESETS].needsKey : false);
-  const runCheck = (k: string, settings: IntelligenceSettings) => {
+  const runCheck = (k: string, settings: IntelligenceSettings, immediate = false) => {
     clearTimeout(timer.current);
     const g = ++gen.current;
     if (!k && needsKey) { setCheck({ state: 'idle' }); void engram?.secrets.set('apiKey', null); return; }
+    if (!needsKey && !settings.baseUrl) { setCheck({ state: 'idle' }); return; }
     setCheck({ state: 'checking' });
     timer.current = setTimeout(async () => {
       const r = await checkKey(settings, k.trim());
       if (g !== gen.current) return;
       setCheck(r);
       if (r.state === 'ok' && engram) { await engram.secrets.set('apiKey', k.trim() || null); engram.queue.reenqueueSkipped(); void engram.drain(); }
-    }, 600);
+    }, immediate ? 0 : 600);
   };
   const onKey = (k: string) => { setKey(k); runCheck(k, s); };
   const choose = (p: KeyProvider, extra: Partial<IntelligenceSettings> = {}) => {
@@ -115,12 +124,13 @@ export default function Intelligence() {
             ? `Private and free. Tags and visual search; summaries are off by default. Downloads a model once (${MODEL_SIZE}, Wi-Fi only).${onDeviceTier() === 'experimental' ? ' May be slow on this phone.' : ''}`
             : `Private and free. Tags and visual search. ${engram?.onDeviceReason ?? 'Not available on this phone.'}`}
           selected={s.mode === 'on-device'}
+          expanded={!!dl}
           onPress={() => { if (!offered) return; if (ready) set({ mode: 'on-device' }); else void download(); }}
         >
           {!offered ? null : dl ? (
             <View style={{ gap: space[2] }}>
               <ProgressLine />
-              <Text size="xs" mono color="text3">{MODEL_SIZE} · {Math.round(((dl.llm + dl.embed) / 2) * 100)}%</Text>
+              <Text size="xs" mono color="text3">{MODEL_SIZE} · {Math.round(((dl.llm * 500 + dl.embed * 90) / 590) * 100)}%</Text>
             </View>
           ) : ready ? (
             <>
@@ -132,7 +142,7 @@ export default function Intelligence() {
           )}
         </RadioCard>
 
-      <RadioCard title="Bring a key" body="" selected={s.mode === 'key'} onPress={() => { if (s.mode !== 'key') choose(s.provider ?? 'anthropic'); }}>
+      <RadioCard title="Bring a key" body="" selected={s.mode === 'key'} onPress={() => { if (s.mode === 'key') return; if (!s.provider) { choose('anthropic'); return; } set({ mode: 'key' }); runCheck(key, { ...s, mode: 'key' }, true); }}>
         <Segmented options={SEGMENTS} value={seg} onChange={(id) => choose(id === 'custom' ? 'custom' : id)} />
         {seg === 'custom' ? (
           <>
@@ -148,7 +158,7 @@ export default function Intelligence() {
           value={key}
           onChangeText={onKey}
           placeholder={seg === 'anthropic' ? 'sk-ant-…' : 'sk-…'}
-          right={<View style={{ flexDirection: 'row' }}>{key ? <InlineButton title="Clear" onPress={() => onKey('')} /> : null}<InlineButton title="Paste" onPress={() => void paste()} /></View>}
+          right={<View style={{ flexDirection: 'row' }}>{key ? <InlineButton title="Clear" onPress={() => onKey('')} /> : null}<InlineButton title="Paste" onPress={() => void paste()} />{key || !needsKey ? <InlineButton title="Test" onPress={() => runCheck(key, s, true)} /> : null}</View>}
         />
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space[2] }}>
           <Text size="xs" mono={check.state === 'ok'} color={checkColor} style={{ flex: 1 }}>{checkLine}</Text>

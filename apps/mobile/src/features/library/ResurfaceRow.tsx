@@ -22,12 +22,12 @@ export function ResurfaceRow({ count, onPress }: { count: number; onPress: () =>
     <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: space[1], paddingTop: 4, paddingBottom: 10, gap: space[2] }}>
       <Trace size={14} opacity={0.4} />
       <Pressable accessibilityRole="button" onPress={onPress} hitSlop={12} style={{ flex: 1, justifyContent: 'center' }}>
-        <Text size="xs" color="text2" style={{ fontSize: 13 }}>
-          {faint} faint traces · <Text size="xs" weight={500} color="text" style={{ fontSize: 13 }}>Resurface</Text>
+        <Text size="xs" color="text2">
+          {faint} faint traces · <Text size="xs" weight={500} color="text">Resurface</Text>
         </Text>
       </Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel="Dismiss" onPress={dismiss} hitSlop={12} style={{ justifyContent: 'center' }}>
-        <Text size="xs" color="text3" style={{ fontSize: 13 }}>{'✕'}</Text>
+        <Text size="xs" color="text3">{'✕'}</Text>
       </Pressable>
     </View>
   );

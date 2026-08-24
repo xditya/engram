@@ -22,8 +22,8 @@ export function PinnedStrip({ pinned, onPress }: { pinned: Entry[]; onPress: (id
             <Image source={{ uri }} style={{ width: 132, height: 96 }} contentFit="cover" accessibilityIgnoresInvertColors />
           ) : (
             <View style={{ flex: 1, padding: 10, justifyContent: 'space-between' }}>
-              <Text size="xs" weight={500} numberOfLines={3} style={{ fontSize: 13, lineHeight: 16 }}>{item.title ?? item.body ?? item.url ?? 'Untitled'}</Text>
-              <Text size="xs" mono color="text3" style={{ fontSize: 11 }}>{item.type}</Text>
+              <Text size="xs" weight={500} numberOfLines={3} style={{ lineHeight: 16 }}>{item.title ?? item.body ?? item.url ?? 'Untitled'}</Text>
+              <Text size="xs" mono color="text3">{item.type}</Text>
             </View>
           )}
         </Pressable>

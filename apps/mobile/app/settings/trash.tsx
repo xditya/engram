@@ -26,7 +26,7 @@ export default function Trash() {
         <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => router.back()} hitSlop={8} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
           <Text size="xl" color="text2">‹</Text>
         </Pressable>
-        <Text weight={600} style={{ fontSize: 17 }}>Let go</Text>
+        <Text weight={600}>Let go</Text>
         {items.length ? <Text size="xs" mono color="text3" style={{ marginLeft: 'auto', marginRight: space[3] }}>{n(items.length)}</Text> : null}
       </View>
       <Text size="sm" color="text2" style={{ paddingHorizontal: space[4], paddingBottom: space[3] }}>
@@ -41,7 +41,7 @@ export default function Trash() {
         renderItem={({ item }) => (
           <View style={{ flexDirection: 'row', alignItems: 'center', minHeight: 56, gap: space[3], backgroundColor: c.bg }}>
             <View style={{ flex: 1, paddingVertical: space[2] }}>
-              <Text size="sm" style={{ fontSize: 15 }} numberOfLines={2}>{item.title ?? item.url ?? 'Untitled'}</Text>
+              <Text size="sm" numberOfLines={2}>{item.title ?? item.url ?? 'Untitled'}</Text>
               <Text size="xs" mono color="text3">{item.domain ? `${item.domain} · ` : ''}{daysLeft(item.deleted_at ?? Date.now())} d left</Text>
             </View>
             <InlineButton title="Restore" onPress={() => restore(item)} />

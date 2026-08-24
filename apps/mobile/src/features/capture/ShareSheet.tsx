@@ -97,7 +97,7 @@ function SavedPill() {
   return (
     <View style={{ height: 280, alignItems: 'center', justifyContent: 'center' }}>
       <Animated.View entering={FadeIn.duration(120)} style={[{ height: 44, paddingHorizontal: 22, borderRadius: 22, backgroundColor: c.text, justifyContent: 'center' }, style]}>
-        <Text weight={500} style={{ fontSize: 15, color: '#FFFFFF' }}>Saved</Text>
+        <Text weight={500} size="sm" style={{ color: '#FFFFFF' }}>Saved</Text>
       </Animated.View>
     </View>
   );
