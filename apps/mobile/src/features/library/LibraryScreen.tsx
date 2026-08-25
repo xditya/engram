@@ -52,7 +52,7 @@ export function LibraryScreen() {
   const collapse = useSharedValue(0);
   const fold = (v: boolean) => { folded.current = v; collapse.value = withTiming(v ? 1 : 0, { duration: 240, easing: Easing.out(Easing.cubic) }); };
   const { width: winW } = useWindowDimensions();
-  const searchW = winW - space[4] * 2 - 60 - space[3];
+  const searchW = winW - space[4] * 2 - 56 - space[3];
   const searchStyle = useAnimatedStyle(() => ({
     width: interpolate(collapse.value, [0, 1], [searchW, 0]),
     opacity: interpolate(collapse.value, [0, 0.6, 1], [1, 0, 0]),
@@ -128,8 +128,8 @@ export function LibraryScreen() {
 
   // 22 px glyphs in a 24 px box, 16 px apart; the 44 pt target comes from hitSlop, not from the box.
   const iconButton = (name: Parameters<typeof Icon>[0]['name'], label: string, onPress: () => void) => (
-    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} hitSlop={12} style={{ width: 24, height: 24, alignItems: 'center', justifyContent: 'center' }}>
-      <Icon name={name} />
+    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} hitSlop={12} style={{ width: 28, height: 28, alignItems: 'center', justifyContent: 'center' }}>
+      <Icon name={name} size={24} />
     </Pressable>
   );
 
@@ -137,7 +137,7 @@ export function LibraryScreen() {
     <Screen>
       <View style={{ flexDirection: 'row', alignItems: 'center', paddingTop: 18, paddingBottom: 10, paddingHorizontal: space[4], gap: space[4] }}>
         <Pressable accessibilityRole="header" focusable={false} onPress={() => list.current?.scrollToOffset({ offset: 0, animated: true })} style={{ flex: 1, justifyContent: 'center' }}>
-          <Text weight={600}>engram</Text>
+          <Text size="xl" weight={600}>engram</Text>
         </Pressable>
         {selected ? (
           <Pressable accessibilityRole="button" onPress={() => setSelected(null)} hitSlop={12} style={{ justifyContent: 'center' }}>
@@ -147,8 +147,8 @@ export function LibraryScreen() {
           <>
             {iconButton('spaces', 'Spaces', () => router.push('/spaces'))}
             {iconButton(grid ? 'view-list' : 'view-grid', grid ? 'List view' : 'Grid view', () => patch('ui', { view: grid ? 'list' : 'grid' }))}
-            <Pressable accessibilityRole="button" accessibilityLabel="More" onPress={() => setMenu(true)} hitSlop={12} style={{ height: 24, justifyContent: 'center' }}>
-              <Text color="text2" style={{ fontSize: 18, lineHeight: 24, letterSpacing: 2 }}>···</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel="More" onPress={() => setMenu(true)} hitSlop={12} style={{ height: 28, justifyContent: 'center' }}>
+              <Text color="text2" style={{ fontSize: 20, lineHeight: 28, letterSpacing: 2 }}>···</Text>
             </Pressable>
           </>
         )}
@@ -213,7 +213,7 @@ export function LibraryScreen() {
               <Pressable
                 accessibilityRole="search"
                 onPress={() => router.push('/search')}
-                style={{ width: searchW, height: 52, borderRadius: 12, backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, justifyContent: 'center', paddingHorizontal: space[4] }}
+                style={{ width: searchW, height: 48, borderRadius: 12, backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, justifyContent: 'center', paddingHorizontal: space[4] }}
               >
                 <Text size="sm" color="text3">Search your library</Text>
               </Pressable>
@@ -222,10 +222,10 @@ export function LibraryScreen() {
               accessibilityRole="button"
               accessibilityLabel={folded.current ? 'Search or add' : 'Add'}
               onPress={() => { if (folded.current) fold(false); else router.push('/capture'); }}
-              style={({ pressed }) => ({ width: 60, height: 60, borderRadius: radius.lg, backgroundColor: c.accent, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.85 : 1 })}
+              style={({ pressed }) => ({ width: 56, height: 56, borderRadius: radius.lg, backgroundColor: c.accent, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.85 : 1 })}
             >
               <Animated.View style={[{ position: 'absolute' }, plusStyle]}>
-                <Text style={{ fontSize: 28, lineHeight: 28, color: dark ? c.bg : c.surface }}>+</Text>
+                <Text style={{ fontSize: 26, lineHeight: 26, color: dark ? c.bg : c.surface }}>+</Text>
               </Animated.View>
               <Animated.View style={[{ position: 'absolute' }, markStyle]}>
                 <Trace size={28} color={dark ? c.bg : c.surface} />

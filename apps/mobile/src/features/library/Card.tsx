@@ -26,7 +26,7 @@ export function Card({ entry, width, selecting, selected, showTrace, fresh, onPr
   const ratio = thumb?.w && thumb.h ? Math.min(2, Math.max(0.5, thumb.h / thumb.w)) : 1;
   const meta = parseMeta(item.meta);
   const pad = space[3];
-  const media = item.type === 'image' || item.type === 'video';
+  const media = (item.type === 'image' && !!uri) || item.type === 'video'; // an image card with no file lays out as text
   const bottom = showTrace && !media ? pad + 14 : pad; // text cards leave room for the trace at left 12 / bottom 10
 
   const img = uri
@@ -41,7 +41,8 @@ export function Card({ entry, width, selecting, selected, showTrace, fresh, onPr
   const title = (t: string) => <Text size="md" weight={500} numberOfLines={2}>{t}</Text>;
 
   let body: ReactNode;
-  switch (item.type) {
+  // An image card with nothing to show yet (thumb still downloading, or none found) reads as a link card instead.
+  switch (item.type === 'image' && !img && (item.title || item.url) ? 'link' : item.type) {
     case 'image':
       body = img ?? block(1);
       break;
@@ -107,7 +108,7 @@ export function Card({ entry, width, selecting, selected, showTrace, fresh, onPr
         accessibilityState={{ selected }}
         onPress={onPress}
         onLongPress={onLongPress}
-        style={({ pressed }) => ({ width, borderRadius: radius.md, overflow: 'hidden', backgroundColor: c.surface, opacity: pressed ? 0.85 : 1 })}
+        style={({ pressed }) => ({ width, borderRadius: radius.md, overflow: 'hidden', backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, opacity: pressed ? 0.85 : 1 })}
       >
         {body}
         {showTrace ? (

@@ -7,8 +7,8 @@
 
 export const theme = {
   color: {
-    light: { bg: '#F4F5F7', surface: '#FFFFFF', surface2: '#ECEEF1', text: '#15171A', text2: '#5C6370', text3: '#666D75', line: '#DDE0E5', accent: '#2E4FD6', accentSoft: '#2E4FD61A', danger: '#C2352B' },
-    dark:  { bg: '#0F1114', surface: '#17191D', surface2: '#1F2227', text: '#EDEFF2', text2: '#A3A9B3', text3: '#828996', line: '#272A30', accent: '#7B96FF', accentSoft: '#7B96FF24', danger: '#E5574B' },
+    light: { bg: '#EFF1F4', surface: '#FFFFFF', surface2: '#E8EAEE', text: '#15171A', text2: '#5C6370', text3: '#666D75', line: '#D9DCE2', accent: '#2E4FD6', accentSoft: '#2E4FD61A', danger: '#C2352B' },
+    dark:  { bg: '#0B0D10', surface: '#171A1F', surface2: '#22262C', text: '#EDEFF2', text2: '#A3A9B3', text3: '#828996', line: '#2C3038', accent: '#7B96FF', accentSoft: '#7B96FF24', danger: '#E5574B' },
   },
   font: {
     sans: 'Geist',

@@ -8,6 +8,7 @@ export function useTheme() {
   const scheme = useColorScheme();
   const oled = useAppearance((s) => s.oled);
   const base = theme.color[scheme === 'dark' ? 'dark' : 'light'];
-  const c: Colors = oled && scheme === 'dark' ? { ...base, bg: '#000', surface: '#000' } : base;
+  // True black paints only the ground; cards keep a step of contrast or they vanish.
+  const c: Colors = oled && scheme === 'dark' ? { ...base, bg: '#000', surface: '#111317', surface2: '#1A1D22', line: '#22252B' } : base;
   return { c, dark: scheme === 'dark', ...theme };
 }
