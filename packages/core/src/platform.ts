@@ -33,7 +33,7 @@ export interface Platform {
   db: Database;
   keys: KeyStore;
   files: FileStore;
-  fetchText(url: string, opts?: { maxBytes?: number }): Promise<{ html: string; finalUrl: string; contentType: string }>;
+  fetchText(url: string, opts?: { maxBytes?: number; userAgent?: string }): Promise<{ html: string; finalUrl: string; contentType: string }>;
   thumbnail(path: string, maxPx: number): Promise<{ path: string; w: number; h: number }>;
   ocr?(path: string): Promise<string>; // undefined: ocr jobs are skipped on this device
   onDevice?: OnDeviceAI; // undefined: on-device provider not offered

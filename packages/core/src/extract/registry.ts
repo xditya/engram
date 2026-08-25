@@ -4,12 +4,17 @@ import type { Platform } from '../platform';
 import { MAX_HTML_BYTES, capHtml } from './html';
 import { oembed } from './oembed';
 import { openGraph, readability } from './generic';
-import { amazonBook, github, image, pdf, recipe, reddit, twitter, youtube } from './sites';
+import { amazonBook, github, image, instagram, pdf, recipe, reddit, twitter, youtube } from './sites';
+import { titleFromUrl } from './title';
+
+// What Twitter's card fetcher sends; sites that block it block every preview.
+const PREVIEW_UA = 'Twitterbot/1.0';
+const hasOg = (h: string) => /property=["']og:(?:title|image)/i.test(h);
 
 export type Enriched = Partial<Item> & { files?: PendingFile[] };
 
 const GENERIC: Enricher[] = [oembed, openGraph, readability];
-const SITES: Enricher[] = [youtube, github, twitter, reddit, amazonBook, recipe, pdf, image];
+const SITES: Enricher[] = [youtube, github, twitter, reddit, instagram, amazonBook, recipe, pdf, image];
 export const enrichers: Enricher[] = [...SITES, ...GENERIC];
 
 const parseMeta = (s: unknown): Record<string, unknown> => { try { return typeof s === 'string' ? JSON.parse(s) : {}; } catch { return {}; } };
@@ -20,11 +25,14 @@ function merge(base: Enriched, over: Enriched): Enriched {
   for (const [k, v] of Object.entries(over)) {
     if (v == null) continue;
     if (k === 'meta') out.meta = JSON.stringify({ ...parseMeta(base.meta), ...parseMeta(v) });
-    else if (k === 'files') out.files = [...(base.files ?? []), ...(v as PendingFile[])];
+    // Two enrichers naming the same image url (og:image + a site enricher) must not download it twice.
+    else if (k === 'files') out.files = [...(base.files ?? []), ...(v as PendingFile[]).filter((f) => !f.url || !(base.files ?? []).some((g) => g.url === f.url))];
     else out[k] = v;
   }
   return out as Enriched;
 }
+
+const BARE_TITLE = /^(instagram|reddit|threads|threads • log in|linkedin|facebook|pinterest|spotify – web player|redirecting\.\.\.|log ?in|error|untitled)$/i;
 
 export async function runEnrichers(url: string, opts: { html?: string; platform: Platform }): Promise<Enriched> {
   const u = new URL(url);
@@ -40,6 +48,13 @@ export async function runEnrichers(url: string, opts: { html?: string; platform:
       if (!/^\d{3}\s/.test((e as Error).message ?? '')) throw new Error(`page fetch failed: ${(e as Error).message}`);
     }
   }
+  // Instagram, Pinterest and friends serve browsers an empty JS shell but give link-preview bots the og: tags.
+  if (opts.html == null && html != null && !hasOg(html)) {
+    try {
+      const r = await opts.platform.fetchText(url, { maxBytes: MAX_HTML_BYTES, userAgent: PREVIEW_UA });
+      if (hasOg(r.html)) { html = r.html; contentType = r.contentType || contentType; }
+    } catch { /* keep the shell; the url-derived title still applies */ }
+  }
   if (html != null) html = capHtml(html);
   const site = SITES.map((e) => [e, e.match(u, contentType)] as const).filter(([, p]) => p > 0).sort((a, b) => b[1] - a[1])[0]?.[0];
   let out: Enriched = {};
@@ -47,6 +62,8 @@ export async function runEnrichers(url: string, opts: { html?: string; platform:
   for (const e of site ? [...GENERIC].reverse().concat(site) : [...GENERIC].reverse()) {
     try { out = merge(out, await e.enrich({ url: u, html, platform: opts.platform })); } catch { /* one failing enricher never sinks the item */ }
   }
+  // JS-shell and login pages title themselves with the bare site name; a title built from the url beats that.
+  if (!out.title || BARE_TITLE.test(out.title)) out.title = titleFromUrl(url);
   return out;
 }
 

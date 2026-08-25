@@ -1,11 +1,22 @@
 import { Readability } from '@mozilla/readability';
 import type { Enricher, PendingFile } from './types';
 import type { Item, ItemType } from '../model/types';
-import { absoluteUrl, cleanText, meta, parseHtml } from './html';
+import { absoluteUrl, cleanText, jsonLd, meta, parseHtml } from './html';
 
 type Out = Partial<Item> & { files?: PendingFile[] };
 
 const OG_TYPE: Record<string, ItemType> = { article: 'article', book: 'book', product: 'product', video: 'video' };
+
+// schema.org image: a url string, an ImageObject {url}, or an array of either. First usable one wins.
+function ldImage(doc: ReturnType<typeof parseHtml>): string | null {
+  for (const n of jsonLd(doc)) {
+    const img = (n as { image?: unknown })?.image;
+    const first = Array.isArray(img) ? img[0] : img;
+    const u = typeof first === 'string' ? first : (first as { url?: unknown })?.url;
+    if (typeof u === 'string' && u) return u;
+  }
+  return null;
+}
 
 export const openGraph: Enricher = {
   id: 'openGraph',
@@ -26,7 +37,12 @@ export const openGraph: Enricher = {
     const icon = absoluteUrl(doc.querySelector('link[rel~="icon"]')?.getAttribute('href') ?? '/favicon.ico', url);
     if (icon) m.favicon = icon;
     if (Object.keys(m).length) out.meta = JSON.stringify(m);
-    const img = absoluteUrl(meta(doc, ['og:image', 'og:image:url', 'twitter:image']), url);
+    const img = absoluteUrl(
+      meta(doc, ['og:image', 'og:image:url', 'og:image:secure_url', 'twitter:image', 'twitter:image:src'])
+        ?? doc.querySelector('link[rel="image_src"]')?.getAttribute('href')
+        ?? ldImage(doc),
+      url,
+    );
     if (img) out.files = [{ role: 'thumb', url: img }];
     return out;
   },

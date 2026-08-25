@@ -106,7 +106,7 @@ describe('site enrichers', () => {
     expect((await runEnrichers('https://a.com/i', { platform: ct })).type).toBe('image');
   });
   it('registry order and guessTypeFromUrl', () => {
-    expect(enrichers.map((e) => e.id)).toEqual(['youtube', 'github', 'twitter', 'reddit', 'amazonBook', 'recipe', 'pdf', 'image', 'oembed', 'openGraph', 'readability']);
+    expect(enrichers.map((e) => e.id)).toEqual(['youtube', 'github', 'twitter', 'reddit', 'instagram', 'amazonBook', 'recipe', 'pdf', 'image', 'oembed', 'openGraph', 'readability']);
     expect(guessTypeFromUrl('https://youtu.be/dQw4w9WgXcQ')).toBe('video');
     expect(guessTypeFromUrl('https://github.com/a/b')).toBe('repo');
     expect(guessTypeFromUrl('https://x.com/a/status/1')).toBe('tweet');

@@ -1,5 +1,5 @@
 import type { Enricher } from './types';
-import { jsonLd, parseHtml } from './html';
+import { cleanText, jsonLd, meta, parseHtml } from './html';
 
 const host = (u: URL) => u.hostname.replace(/^www\./, '');
 const is = (u: URL, ...hosts: string[]) => hosts.some((h) => host(u) === h || host(u).endsWith('.' + h));
@@ -44,6 +44,42 @@ export const reddit: Enricher = {
   match: (u) => (is(u, 'reddit.com') && u.pathname.startsWith('/r/') ? 10 : 0),
   async enrich({ url }) {
     return { meta: JSON.stringify({ subreddit: url.pathname.split('/')[2] }) };
+  },
+};
+
+// Verified 2026-08-25: public posts/reels serve og:title (`Name on Instagram: "caption"`), og:description
+// ("405K likes, 2 comments - handle on Aug 19, 2026: ..."), og:image and og:url (/handle/p/<code>/) to any UA.
+// A missing/private post has no og:title and <title>Instagram</title>, so that title is never used.
+// The /embed/captioned/ page still carries the image and handle when the post page does not.
+const igCode = (u: URL) => /^\/(?:[^/]+\/)?(p|reel|reels|tv)\/([\w-]+)/.exec(u.pathname);
+export const instagram: Enricher = {
+  id: 'instagram',
+  match: (u) => (is(u, 'instagram.com') && igCode(u) ? 10 : 0),
+  async enrich({ url, html, platform }) {
+    const [, kind, shortcode] = igCode(url)!;
+    const doc = html ? parseHtml(html) : null;
+    const og = (n: string) => (doc ? meta(doc, [n]) : null) ?? '';
+    let handle = /^\/([^/]+)\/(?:p|reel|reels|tv)\//.exec(new URL(og('og:url') || '/', url).pathname)?.[1]
+      ?? /\s-\s(\S+)\son\s/.exec(og('og:description'))?.[1];
+    // og:title is `Name on Instagram: "caption"`; keep the caption only.
+    const caption = cleanText(/:\s*"([\s\S]*?)"?\s*$/.exec(og('og:title'))?.[1]);
+    let img: string | null = og('og:image') || null;
+    if (!img || !handle) {
+      try {
+        const embed = (await platform.fetchText(`https://www.instagram.com/p/${shortcode}/embed/captioned/`, { maxBytes: 512 * 1024 })).html;
+        img ??= /class="EmbeddedMediaImage"[^>]*\ssrc="([^"]+)"/.exec(embed)?.[1]?.replace(/&amp;/g, '&') ?? null;
+        handle ??= /class="UsernameText">([^<]+)</.exec(embed)?.[1];
+      } catch { /* login wall or offline: the card keeps what the post page gave */ }
+    }
+    const title = (handle ? `@${handle} on Instagram` : 'Instagram post') + (caption ? `: ${caption.slice(0, 80)}` : '');
+    return {
+      // A post renders as a link card (thumb + caption + handle); a reel is a video only once a poster exists.
+      type: kind !== 'p' && img ? 'video' : 'link',
+      title,
+      ...(caption ? { summary: caption } : {}),
+      meta: JSON.stringify({ shortcode, ...(handle ? { handle } : {}) }),
+      ...(img ? { files: [{ role: 'thumb', url: img }] } : {}),
+    };
   },
 };
 

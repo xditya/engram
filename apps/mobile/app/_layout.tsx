@@ -49,7 +49,8 @@ function useCaptureIntents() {
         const text = decodeURIComponent(Array.from(bin, (ch) => '%' + ch.charCodeAt(0).toString(16).padStart(2, '0')).join(''));
         if (text === 'pasteboard') {
           const files = takeSharedPasteboard();
-          log('share', `pasteboard: ${files.length} file(s)`);
+          const wrote = /[?&]n=(\d+)&m=(\d+)/.exec(url);
+          log('share', `pasteboard: took ${files.length} file(s)${wrote ? `; extension wrote ${wrote[1]} of ${wrote[2]}` : ''}`);
           if (files.length) setIntent({ files: files.map((f) => ({ path: f })) });
           else log('error', 'pasteboard: nothing to take');
         } else {

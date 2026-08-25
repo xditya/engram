@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
 import { Image } from 'expo-image';
 import Animated, { FadeIn } from 'react-native-reanimated';
+import { extract } from '@engram/core';
 import { Trace } from '../../icons/Icon';
 import { useTheme } from '../../theme/useTheme';
 import { Fade, Text } from '../../ui';
@@ -92,7 +93,7 @@ export function Card({ entry, width, selecting, selected, showTrace, fresh, onPr
         <View style={{ paddingHorizontal: pad, paddingTop: pad, paddingBottom: bottom, gap: 6 }}>
           {inset}
           {title(item.title ?? item.url ?? 'Untitled')}
-          {domain}
+          {item.type === 'link' && item.url ? <Text size="xs" mono color="text3" numberOfLines={1}>{extract.shortUrl(item.url)}</Text> : domain}
         </View>
       );
   }

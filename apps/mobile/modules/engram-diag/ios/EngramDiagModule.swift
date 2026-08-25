@@ -51,7 +51,14 @@ public class EngramDiagModule: Module {
     // Media the share extension parked on the same-team named pasteboard because no App Group was usable.
     // Each item is copied into the caches directory; the pasteboard is cleared. Returns file:// URIs.
     Function("takeSharedPasteboard") { () -> [String] in
-      guard let pb = UIPasteboard(name: UIPasteboard.Name("app.engram.share"), create: false) else { return [] }
+      // The named pasteboard is tried first; if it did not survive the extension process, the general pasteboard
+      // holds the same items, marked with our key so nothing the user copied is ever taken.
+      let named = UIPasteboard(name: UIPasteboard.Name("app.engram.share"), create: false)
+      let ours = { (pb: UIPasteboard) in pb.items.contains { $0["app.engram.share"] != nil } }
+      let pb: UIPasteboard
+      if let n = named, n.numberOfItems > 0 { pb = n }
+      else if ours(UIPasteboard.general) { pb = UIPasteboard.general }
+      else { return [] }
       let dir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("shared", isDirectory: true)
       try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
       var out: [String] = []
@@ -67,6 +74,8 @@ public class EngramDiagModule: Module {
         if (try? data.write(to: url)) != nil { out.append(url.absoluteString) }
       }
       pb.items = []
+      named?.items = []
+      if ours(UIPasteboard.general) { UIPasteboard.general.items = [] }
       return out
     }
   }

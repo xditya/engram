@@ -3,6 +3,16 @@ import type { Item } from '../model/types';
 import { parseHtml } from './html';
 
 // host -> endpoint. A discovery <link type="application/json+oembed"> in the page wins when present.
+// Verified unauthenticated from Node, 2026-08-25:
+//   host             route                                   gives
+//   vimeo.com        vimeo.com/api/oembed.json               title, author, thumb, type=video
+//   soundcloud.com   soundcloud.com/oembed                   title, author, thumb
+//   spotify.com      open.spotify.com/oembed                 title, thumb (the page itself is a JS shell)
+//   reddit.com       reddit.com/oembed                       title, author; no thumb (page is a JS shell / 403)
+//   dailymotion.com  dailymotion.com/services/oembed         title, author, thumb, type=video
+//   flickr.com       flickr.com/services/oembed/             endpoint live (only a placeholder id was tried)
+//   tiktok.com       tiktok.com/oembed                       NOT verifiable here (host blocked on the test network)
+//   youtube / twitter: unchanged.
 const PROVIDERS: [string, string][] = [
   ['youtube.com', 'https://www.youtube.com/oembed'],
   ['youtu.be', 'https://www.youtube.com/oembed'],
@@ -11,6 +21,10 @@ const PROVIDERS: [string, string][] = [
   ['x.com', 'https://publish.twitter.com/oembed'],
   ['soundcloud.com', 'https://soundcloud.com/oembed'],
   ['spotify.com', 'https://open.spotify.com/oembed'],
+  ['reddit.com', 'https://www.reddit.com/oembed'],
+  ['tiktok.com', 'https://www.tiktok.com/oembed'],
+  ['dailymotion.com', 'https://www.dailymotion.com/services/oembed'],
+  ['flickr.com', 'https://www.flickr.com/services/oembed/'],
 ];
 
 export function oembedEndpoint(url: URL, html?: string): string | null {

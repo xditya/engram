@@ -86,8 +86,8 @@ export function createFileStore(dir: string): FileStore {
 
 const DESKTOP_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36';
 
-export async function fetchText(url: string, opts?: { maxBytes?: number }): Promise<{ html: string; finalUrl: string; contentType: string }> {
-  const res = await fetch(url, { headers: { 'user-agent': DESKTOP_UA, accept: 'text/html,application/xhtml+xml,*/*;q=0.8' } });
+export async function fetchText(url: string, opts?: { maxBytes?: number; userAgent?: string }): Promise<{ html: string; finalUrl: string; contentType: string }> {
+  const res = await fetch(url, { headers: { 'user-agent': opts?.userAgent ?? DESKTOP_UA, accept: 'text/html,application/xhtml+xml,*/*;q=0.8', 'accept-language': 'en-US,en;q=0.9' } });
   // ponytail: RN fetch has no streaming body, so the whole response lands in memory before the slice.
   // Fine for pages; the extractors only ever want html.
   const html = (await res.text()).slice(0, opts?.maxBytes ?? 2_000_000);

@@ -60,16 +60,20 @@ const HELPERS = `
     if handedOff { return }
     handedOff = true
     var payload = ""
+    var written = 0
     let media = ["images", "videos", "files"].flatMap { shared[$0] as? [String] ?? [] }
     if !media.isEmpty {
-      if let pb = UIPasteboard(name: UIPasteboard.Name("${PASTEBOARD}"), create: true) {
-        // The bytes themselves: the app cannot read this process's sandbox. The file name carries the type hint.
-        pb.items = media.compactMap { p -> [String: Any]? in
-          let url = p.hasPrefix("file:") ? URL(string: p) : URL(fileURLWithPath: p)
-          guard let u = url, let data = try? Data(contentsOf: u) else { return nil }
-          return ["public.data": data, "public.utf8-plain-text": u.lastPathComponent]
-        }
+      // The bytes themselves: the app cannot read this process's sandbox. The file name carries the type hint.
+      let items = media.compactMap { p -> [String: Any]? in
+        let url = p.hasPrefix("file:") ? URL(string: p) : URL(fileURLWithPath: p)
+        guard let u = url, let data = try? Data(contentsOf: u) else { return nil }
+        return ["public.data": data, "public.utf8-plain-text": u.lastPathComponent, "${PASTEBOARD}": "1"]
       }
+      written = items.count
+      if let pb = UIPasteboard(name: UIPasteboard.Name("${PASTEBOARD}"), create: true) { pb.items = items }
+      // The general pasteboard is the one channel certain to outlive this process; the app takes and clears it.
+      // localOnly keeps the bytes off Universal Clipboard.
+      if !items.isEmpty { UIPasteboard.general.setItems(items, options: [.localOnly: true]) }
       payload = "pasteboard"
     } else {
       var json: [String: String] = [:]
@@ -81,23 +85,18 @@ const HELPERS = `
     let p = Data(payload.utf8).base64EncodedString()
       .replacingOccurrences(of: "+", with: "-").replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "=", with: "")
     let scheme = Bundle.main.object(forInfoDictionaryKey: "HostAppScheme") as? String ?? "${SCHEME}"
-    finish(opening: URL(string: "\\(scheme)://dataUrl=share?nonce=\\(Int(Date().timeIntervalSince1970))&p=\\(p)"))
+    finish(opening: URL(string: "\\(scheme)://dataUrl=share?nonce=\\(Int(Date().timeIntervalSince1970))&p=\\(p)&n=\\(written)&m=\\(media.count)"))
   }
-  // Open the app, then end the request exactly once, after the open call has been made. extensionContext.open
-  // is the sanctioned route; where it declines (share extensions on most iOS versions) the responder chain is used.
+  // Open the app through the responder chain, then end the request once. extensionContext.open never calls back
+  // in a share extension, so waiting on it left the (invisible) sheet up and the host app unresponsive to touch.
   func finish(opening url: URL?) {
     DispatchQueue.main.async { [weak self] in
       guard let self = self else { return }
-      let done = {
-        self.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
-        self.cleanupAfterClose()
-      }
-      guard let url = url, let ctx = self.extensionContext else { done(); return }
-      ctx.open(url) { ok in
-        DispatchQueue.main.async {
-          if !ok { self.openURL(url) }
-          done()
-        }
+      if let url = url { self.openURL(url) }
+      // A short beat lets the open call leave this process before the request ends.
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
+        self?.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
+        self?.cleanupAfterClose()
       }
     }
   }
