@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { textDefaults } from '../../src/ui/Text';
 import { Platform as RN, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { goHome } from '../../src/lib/nav';
@@ -201,7 +202,7 @@ function EnterCode({ scanned }: { scanned?: string }) {
             </View>
           )
         ) : (
-          <TextInput
+          <TextInput allowFontScaling={textDefaults.allowFontScaling} maxFontSizeMultiplier={textDefaults.maxMultiplier}
             accessibilityLabel="6-digit code"
             value={code}
             onChangeText={(t) => { const d = t.replace(/\D/g, '').slice(0, 6); setCode(d); setMessage(null); if (d.length === 6) void submit(d); }}

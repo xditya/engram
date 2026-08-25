@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { textDefaults } from '../../ui/Text';
 import { TextInput, View } from 'react-native';
 import Animated, { FadeIn, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -76,7 +77,7 @@ export function ShareSheet({ intent, onDone }: { intent: ShareIntentLike; onDone
           <Text size="xs" mono color="text3" style={{ marginTop: 3 }}>{d.meta}</Text>
         </View>
       </View>
-      <TextInput
+      <TextInput allowFontScaling={textDefaults.allowFontScaling} maxFontSizeMultiplier={textDefaults.maxMultiplier}
         value={field}
         onChangeText={setField}
         placeholder="Add a note or #tags"

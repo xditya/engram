@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { textDefaults } from '../../ui/Text';
 import { Pressable, TextInput, View } from 'react-native';
 import { useTheme } from '../../theme/useTheme';
 import { Button, Sheet, Text } from '../../ui';
@@ -22,9 +23,9 @@ export function SpaceSheet({ open, initial, onSave, onClose, onDelete }: {
       <View style={{ gap: space[2], paddingTop: space[2] }}>
         <Text size="lg" weight={500}>{initial ? 'Edit Space' : 'New Space'}</Text>
         <Text size="xs" color="text3">Name</Text>
-        <TextInput value={name} onChangeText={setName} placeholder="Name" placeholderTextColor={c.text3} style={[field, { fontFamily: 'Geist' }]} accessibilityLabel="Space name" />
+        <TextInput allowFontScaling={textDefaults.allowFontScaling} maxFontSizeMultiplier={textDefaults.maxMultiplier} value={name} onChangeText={setName} placeholder="Name" placeholderTextColor={c.text3} style={[field, { fontFamily: 'Geist' }]} accessibilityLabel="Space name" />
         <Text size="xs" color="text3">Query</Text>
-        <TextInput
+        <TextInput allowFontScaling={textDefaults.allowFontScaling} maxFontSizeMultiplier={textDefaults.maxMultiplier}
           value={query}
           onChangeText={setQuery}
           placeholder="Query, e.g. tag:design type:article"

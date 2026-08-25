@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { textDefaults } from '../../ui/Text';
 import { Pressable, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { engram, useLiveQuery, useToast } from '../../lib/engram';
@@ -54,7 +55,7 @@ export function SelectBar({ ids, onDone }: { ids: string[]; onDone: () => void }
       </View>
       <Sheet open={mode === 'tag'} onClose={() => setMode(null)}>
         <Text size="lg" weight={500} style={{ marginBottom: space[3] }}>Tag <Text size="lg" mono color="text3">{n}</Text></Text>
-        <TextInput
+        <TextInput allowFontScaling={textDefaults.allowFontScaling} maxFontSizeMultiplier={textDefaults.maxMultiplier}
           autoFocus
           value={tagText}
           onChangeText={setTagText}

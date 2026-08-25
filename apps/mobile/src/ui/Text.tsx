@@ -1,4 +1,4 @@
-import { StyleSheet, Text as RNText, type TextProps as RNTextProps } from 'react-native';
+import { PixelRatio, StyleSheet, Text as RNText, type TextProps as RNTextProps } from 'react-native';
 import { useTheme } from '../theme/useTheme';
 
 type Size = keyof typeof import('../theme/theme').theme.font.size;
@@ -12,8 +12,12 @@ export interface TextProps extends RNTextProps {
   lineHeight?: 'tight' | 'body' | 'reader';
 }
 
+// Dynamic Type only ever enlarges: a text size set below the system default would shrink every label while the
+// layout stays put (iOS scales text, not boxes), so below 1x is treated as 1x; above it is honoured up to 1.3x.
 // iOS share extensions mis-scale RN text with Dynamic Type on; the extension root turns scaling off before rendering.
-export const textDefaults = { allowFontScaling: true };
+export const textDefaults = { allowFontScaling: PixelRatio.getFontScale() >= 1, maxMultiplier: 1.3 };
+// The same clamp for chrome drawn in points (search bar, FAB, header icons), so it grows with the text it sits beside.
+export const uiScale = Math.min(textDefaults.maxMultiplier, Math.max(1, PixelRatio.getFontScale()));
 
 // Fonts are registered in app/_layout.tsx under these exact family names.
 const family = (mono: boolean, w: Weight) =>
@@ -26,6 +30,7 @@ export function Text({ size = 'md', weight = 400, mono = false, color = 'text', 
   return (
     <RNText
       allowFontScaling={textDefaults.allowFontScaling}
+      maxFontSizeMultiplier={textDefaults.maxMultiplier}
       {...rest}
       style={[
         {

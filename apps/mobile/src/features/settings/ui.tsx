@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { textDefaults } from '../../ui/Text';
 import { Children, Fragment } from 'react';
 import { Pressable, ScrollView, Switch, TextInput, View, type TextInputProps } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -102,7 +103,7 @@ export function Field({ label, right, ...input }: { label: string; right?: React
     <View style={{ gap: 4 }}>
       <Text size="xs" color="text3">{label}</Text>
       <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: c.surface2, borderRadius: 10, paddingLeft: space[3], minHeight: 44 }}>
-        <TextInput
+        <TextInput allowFontScaling={textDefaults.allowFontScaling} maxFontSizeMultiplier={textDefaults.maxMultiplier}
           accessibilityLabel={label}
           autoCapitalize="none"
           autoCorrect={false}

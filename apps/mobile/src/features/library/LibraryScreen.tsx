@@ -1,3 +1,4 @@
+import { uiScale } from '../../ui/Text';
 import { useRef, useState } from 'react';
 import { Pressable, View, useWindowDimensions, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
 import Animated, { Easing, FadeInUp, interpolate, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -52,7 +53,8 @@ export function LibraryScreen() {
   const collapse = useSharedValue(0);
   const fold = (v: boolean) => { folded.current = v; collapse.value = withTiming(v ? 1 : 0, { duration: 240, easing: Easing.out(Easing.cubic) }); };
   const { width: winW } = useWindowDimensions();
-  const searchW = winW - space[4] * 2 - 56 - space[3];
+  const fab = Math.round(56 * uiScale);
+  const searchW = winW - space[4] * 2 - fab - space[3];
   const searchStyle = useAnimatedStyle(() => ({
     width: interpolate(collapse.value, [0, 1], [searchW, 0]),
     opacity: interpolate(collapse.value, [0, 0.6, 1], [1, 0, 0]),
@@ -128,8 +130,8 @@ export function LibraryScreen() {
 
   // 22 px glyphs in a 24 px box, 16 px apart; the 44 pt target comes from hitSlop, not from the box.
   const iconButton = (name: Parameters<typeof Icon>[0]['name'], label: string, onPress: () => void) => (
-    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} hitSlop={12} style={{ width: 28, height: 28, alignItems: 'center', justifyContent: 'center' }}>
-      <Icon name={name} size={24} />
+    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} hitSlop={12} style={{ width: Math.round(28 * uiScale), height: Math.round(28 * uiScale), alignItems: 'center', justifyContent: 'center' }}>
+      <Icon name={name} size={Math.round(24 * uiScale)} />
     </Pressable>
   );
 
@@ -213,7 +215,7 @@ export function LibraryScreen() {
               <Pressable
                 accessibilityRole="search"
                 onPress={() => router.push('/search')}
-                style={{ width: searchW, height: 48, borderRadius: 12, backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, justifyContent: 'center', paddingHorizontal: space[4] }}
+                style={{ width: searchW, height: Math.round(48 * uiScale), borderRadius: 12, backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, justifyContent: 'center', paddingHorizontal: space[4] }}
               >
                 <Text size="sm" color="text3">Search your library</Text>
               </Pressable>
@@ -222,10 +224,10 @@ export function LibraryScreen() {
               accessibilityRole="button"
               accessibilityLabel={folded.current ? 'Search or add' : 'Add'}
               onPress={() => { if (folded.current) fold(false); else router.push('/capture'); }}
-              style={({ pressed }) => ({ width: 56, height: 56, borderRadius: radius.lg, backgroundColor: c.accent, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.85 : 1 })}
+              style={({ pressed }) => ({ width: fab, height: fab, borderRadius: radius.lg, backgroundColor: c.accent, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.85 : 1 })}
             >
               <Animated.View style={[{ position: 'absolute' }, plusStyle]}>
-                <Text style={{ fontSize: 26, lineHeight: 26, color: dark ? c.bg : c.surface }}>+</Text>
+                <Text style={{ fontSize: Math.round(26 * uiScale), lineHeight: Math.round(26 * uiScale), color: dark ? c.bg : c.surface }}>+</Text>
               </Animated.View>
               <Animated.View style={[{ position: 'absolute' }, markStyle]}>
                 <Trace size={28} color={dark ? c.bg : c.surface} />

@@ -55,9 +55,8 @@ export function Tags({ item, tags, pending, compact }: { item: Item; tags: strin
         {draft === null ? (
           <TagChip label="+ tag" dashed accessibilityLabel="Add tag" onPress={() => setDraft('')} />
         ) : (
-          <TextInput
+          <TextInput allowFontScaling={textDefaults.allowFontScaling} maxFontSizeMultiplier={textDefaults.maxMultiplier}
             autoFocus
-            allowFontScaling={textDefaults.allowFontScaling}
             value={draft}
             onChangeText={setDraft}
             onSubmitEditing={() => add(draft)}

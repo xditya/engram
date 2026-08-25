@@ -1,3 +1,4 @@
+import { uiScale } from '../src/ui/Text';
 import '../src/polyfills';
 import { useCallback, useEffect, useState } from 'react';
 import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
@@ -137,7 +138,7 @@ function Overlays() {
   const { space } = useTheme();
   const insets = useSafeAreaInsets();
   return (
-    <View pointerEvents="box-none" style={{ position: 'absolute', left: space[4], right: space[4], bottom: insets.bottom + 84, gap: space[2] }}>
+    <View pointerEvents="box-none" style={{ position: 'absolute', left: space[4], right: space[4], bottom: insets.bottom + 16 + Math.round(56 * uiScale) + 12, gap: space[2] }}>
       <ScreenshotPrompt />
       <Toast />
     </View>

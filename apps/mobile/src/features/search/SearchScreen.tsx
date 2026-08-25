@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { textDefaults } from '../../ui/Text';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { search as core } from '@engram/core';
@@ -67,7 +68,7 @@ export function SearchScreen() {
             </Pressable>
           );
         })}
-        <TextInput
+        <TextInput allowFontScaling={textDefaults.allowFontScaling} maxFontSizeMultiplier={textDefaults.maxMultiplier}
           autoFocus
           value={text}
           onChangeText={onChange}

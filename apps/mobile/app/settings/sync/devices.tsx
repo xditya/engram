@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { textDefaults } from '../../../src/ui/Text';
 import { Pressable, TextInput, View } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
 import { FlashList } from '@shopify/flash-list';
@@ -96,7 +97,7 @@ export default function Devices() {
           ) : mode === 'rename' ? (
             <>
               <Text weight={500}>Rename this device</Text>
-              <TextInput
+              <TextInput allowFontScaling={textDefaults.allowFontScaling} maxFontSizeMultiplier={textDefaults.maxMultiplier}
                 accessibilityLabel="Device name"
                 value={name} onChangeText={setName} autoFocus
                 style={{ backgroundColor: c.surface2, borderRadius: 8, minHeight: 44, paddingHorizontal: space[3], color: c.text, fontSize: 15 }}

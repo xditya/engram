@@ -1,11 +1,12 @@
 import { TextInput, type TextInputProps } from 'react-native';
+import { textDefaults } from '../../ui/Text';
 import { useTheme } from '../../theme/useTheme';
 
 // Single-line input on surface2; mono for URLs, keys and usernames.
 export function Field({ mono, style, ...rest }: TextInputProps & { mono?: boolean }) {
   const { c, radius, space } = useTheme();
   return (
-    <TextInput
+    <TextInput allowFontScaling={textDefaults.allowFontScaling} maxFontSizeMultiplier={textDefaults.maxMultiplier}
       autoCapitalize="none"
       autoCorrect={false}
       placeholderTextColor={c.text3}

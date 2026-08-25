@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { textDefaults } from '../../src/ui/Text';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -98,7 +99,7 @@ export default function NoteEditor({ id }: { id?: string } = {}) {
       </View>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, paddingHorizontal: space[5] }}>
         <Pressable style={{ flex: 1 }} onPress={() => input.current?.focus()}>
-          <TextInput
+          <TextInput allowFontScaling={textDefaults.allowFontScaling} maxFontSizeMultiplier={textDefaults.maxMultiplier}
             ref={input}
             multiline
             autoFocus={!idRef.current}
@@ -115,7 +116,7 @@ export default function NoteEditor({ id }: { id?: string } = {}) {
       </ScrollView>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: space[2], paddingHorizontal: space[4], paddingTop: space[2], paddingBottom: kb ? kb + space[2] : Math.max(insets.bottom, space[3]) }}>
         {tags.map((t) => <Chip key={t} label={t} mono onPress={() => removeTag(t)} />)}
-        <TextInput
+        <TextInput allowFontScaling={textDefaults.allowFontScaling} maxFontSizeMultiplier={textDefaults.maxMultiplier}
           value={tagDraft}
           onChangeText={setTagDraft}
           onSubmitEditing={addTag}
