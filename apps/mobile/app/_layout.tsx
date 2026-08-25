@@ -2,15 +2,14 @@ import '../src/polyfills';
 import { useCallback, useEffect, useState } from 'react';
 import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Modal, Platform as RN, Pressable, View } from 'react-native';
+import { AppState, Modal, Platform as RN, Pressable, View } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { goHome } from '../src/lib/nav';
 import * as Linking from 'expo-linking';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
-import { Geist_400Regular, Geist_500Medium, Geist_600SemiBold } from '@expo-google-fonts/geist';
-import { GeistMono_400Regular, GeistMono_500Medium } from '@expo-google-fonts/geist-mono';
+import { FONTS } from '../src/theme/fonts';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useTheme } from '../src/theme/useTheme';
 import { useEngram, useToast, type ShareIntentLike } from '../src/lib/engram';
@@ -18,7 +17,7 @@ import { ShareSheet, useSavedToast } from '../src/features/capture';
 import { listenForScreenshots, saveLatestScreenshot, useScreenshotPrompt } from '../src/lib/screenshots';
 import { useShake } from '../src/lib/useShake';
 import { useShareLog } from '../src/lib/shareLog';
-import { takeSharedPasteboard } from '../modules/engram-diag';
+import { sharedPasteboardInfo, takeSharedPasteboard } from '../modules/engram-diag';
 import * as Haptics from 'expo-haptics';
 import { Text } from '../src/ui';
 import '../src/features/settings/appearance';
@@ -49,11 +48,18 @@ function useCaptureIntents() {
         const bin = atob(p.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - (p.length % 4)) % 4));
         const text = decodeURIComponent(Array.from(bin, (ch) => '%' + ch.charCodeAt(0).toString(16).padStart(2, '0')).join(''));
         if (text === 'pasteboard') {
-          const files = takeSharedPasteboard();
-          const wrote = /[?&]n=(\d+)&m=(\d+)/.exec(url);
-          log('share', `pasteboard: took ${files.length} file(s)${wrote ? `; extension wrote ${wrote[1]} of ${wrote[2]}` : ''}`);
-          if (files.length) setIntent({ files: files.map((f) => ({ path: f })) });
-          else log('error', 'pasteboard: nothing to take');
+          // iOS hands other processes' pasteboard content only to an active app; at deep-link time we may still
+          // be launching, so wait for the foreground before taking it.
+          const take = () => {
+            log('share', `pasteboard before: ${JSON.stringify(sharedPasteboardInfo())}`);
+            const files = takeSharedPasteboard();
+            const wrote = /[?&]n=(\d+)&m=(\d+)/.exec(url);
+            log('share', `pasteboard: took ${files.length} file(s)${wrote ? `; extension wrote ${wrote[1]} of ${wrote[2]}` : ''}`);
+            if (files.length) setIntent({ files: files.map((f) => ({ path: f })) });
+            else log('error', 'pasteboard: nothing to take');
+          };
+          if (AppState.currentState === 'active') setTimeout(take, 300);
+          else { const sub = AppState.addEventListener('change', (s) => { if (s === 'active') { sub.remove(); setTimeout(take, 300); } }); }
         } else {
           const json = JSON.parse(text) as { webUrl?: string; text?: string };
           log('share', `link payload: ${JSON.stringify(json).slice(0, 160)}`);
@@ -141,13 +147,7 @@ function Overlays() {
 export default function RootLayout() {
   const { c, dark } = useTheme();
   const { engram, error } = useEngram();
-  const [loaded, fontError] = useFonts({
-    Geist: Geist_400Regular,
-    'Geist-Medium': Geist_500Medium,
-    'Geist-SemiBold': Geist_600SemiBold,
-    GeistMono: GeistMono_400Regular,
-    'GeistMono-Medium': GeistMono_500Medium,
-  });
+  const [loaded, fontError] = useFonts(FONTS);
   const ready = (loaded || !!fontError) && (!!engram || !!error);
 
   useEffect(() => { if (ready) SplashScreen.hideAsync(); }, [ready]);

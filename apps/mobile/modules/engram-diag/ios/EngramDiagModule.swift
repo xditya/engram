@@ -50,6 +50,18 @@ public class EngramDiagModule: Module {
 
     // Media the share extension parked on the same-team named pasteboard because no App Group was usable.
     // Each item is copied into the caches directory; the pasteboard is cleared. Returns file:// URIs.
+    // What each pasteboard holds right now, for the share log; reading general here is what triggers iOS's paste gate.
+    Function("sharedPasteboardInfo") { () -> [String: Any] in
+      let named = UIPasteboard(name: UIPasteboard.Name("app.engram.share"), create: false)
+      let g = UIPasteboard.general
+      return [
+        "named": named?.numberOfItems ?? -1,
+        "general": g.numberOfItems,
+        "generalTypes": g.types.prefix(6).joined(separator: ","),
+        "generalOurs": g.items.contains { $0["app.engram.share"] != nil },
+        "active": UIApplication.shared.applicationState == .active,
+      ]
+    }
     Function("takeSharedPasteboard") { () -> [String] in
       // The named pasteboard is tried first; if it did not survive the extension process, the general pasteboard
       // holds the same items, marked with our key so nothing the user copied is ever taken.
