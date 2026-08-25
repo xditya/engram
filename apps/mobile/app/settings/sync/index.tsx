@@ -149,7 +149,12 @@ function Status() {
           </View>
         </View>
         {status.state === 'syncing' ? <ProgressLine /> : null}
-        {fix ? <View style={{ padding: space[4], paddingTop: 0 }}><Button title={fix.title} variant="outline" onPress={() => void fix.run()} /></View> : null}
+        {fix ? (
+          <View style={{ padding: space[4], paddingTop: 0, gap: space[2] }}>
+            {status.error ? <Text size="xs" mono color="text3" selectable>{status.error}{/403/.test(status.error) && sync.backend === 'gdrive' ? ' · 403 usually means the Google Drive API is not enabled for this client id, or the account is not a test user of the consent screen' : ''}</Text> : null}
+            <Button title={fix.title} variant="outline" onPress={() => void fix.run()} />
+          </View>
+        ) : null}
         {errors > 0 ? (
           <>
             <Hairline />

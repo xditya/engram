@@ -41,7 +41,12 @@ export async function signInGoogle(keys: KeyStore): Promise<void> {
     codeChallengeMethod: CodeChallengeMethod.S256, extraParams: { access_type: 'offline', prompt: 'consent' },
   });
   const res = await req.promptAsync(discovery);
-  if (res.type !== 'success') throw new Error(res.type === 'error' ? res.error?.message ?? 'Sign-in failed' : 'Sign-in cancelled');
+  if (res.type !== 'success') {
+    if (res.type !== 'error') throw new Error('Sign-in cancelled');
+    // Google puts the reason in the redirect (access_denied for a non-test user, redirect_uri_mismatch, …); show it.
+    const p = (res.params ?? {}) as Record<string, string>;
+    throw new Error(`Sign-in failed: ${p.error_description ?? res.error?.description ?? p.error ?? res.error?.code ?? res.error?.message ?? 'unknown error'}`);
+  }
   const tokens = await exchangeCodeAsync({ clientId, code: res.params.code!, redirectUri, extraParams: { code_verifier: req.codeVerifier ?? '' } }, discovery);
   await store(keys, fromResponse(tokens));
 }
