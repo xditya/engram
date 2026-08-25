@@ -1,5 +1,6 @@
 import { Pressable, View } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
+import { goHome } from '../../src/lib/nav';
 import { Trace } from '../../src/icons/Icon';
 import { BACKEND_NAME } from '../../src/features/sync/lib';
 import { useEngram, useSettings } from '../../src/lib/engram';
@@ -18,7 +19,7 @@ export default function RecoveryFailure() {
   async function startFresh() {
     await engram?.sync.masterKey.clear();
     patch('sync', { backend: 'off' });
-    router.replace('/');
+    goHome();
   }
 
   return (

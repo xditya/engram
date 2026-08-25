@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Platform as RN, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
+import { goHome } from '../../src/lib/nav';
 import * as Haptics from 'expo-haptics';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import QRCode from 'react-native-qrcode-svg';
@@ -167,7 +168,7 @@ function EnterCode({ scanned }: { scanned?: string }) {
               {status.state === 'syncing' ? 'Downloading your library… ' : 'Your library: '}<Text size="sm" mono color="text2">{cards.toLocaleString()}</Text> cards
             </Text>
           </View>
-          <Button title="Continue" onPress={() => router.replace('/')} style={{ alignSelf: 'stretch' }} />
+          <Button title="Continue" onPress={() => goHome()} style={{ alignSelf: 'stretch' }} />
         </View>
       </Screen>
     );

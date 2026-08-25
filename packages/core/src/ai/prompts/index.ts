@@ -7,8 +7,9 @@ export interface Correction { title: string; tags: string[] }
 export function classifyPrompt(opts: { summaries: boolean; instructions?: string; corrections?: Correction[] }): string {
   const lines = [
     'You file saved items into a personal library. Return JSON only:',
-    `{"type": one of ${ITEM_TYPES.join('|')}, "tags": 3-5 short lowercase tags${opts.summaries ? ', "summary": one or two plain sentences' : ''}}`,
+    `{"type": one of ${ITEM_TYPES.join('|')}, "tags": 3-5 short lowercase tags, "title": a 3-8 word title${opts.summaries ? ', "summary": one or two plain sentences' : ''}}`,
     'Tags are topics a person would search for, not formats. Keep the given type unless it is clearly wrong.',
+    'The title names what the item is about, like a headline; never a file name, a url, or a sentence cut mid-way.',
   ];
   if (opts.instructions) lines.push('', 'Extra instructions from the user:', opts.instructions);
   const ex = (opts.corrections ?? []).slice(-10);

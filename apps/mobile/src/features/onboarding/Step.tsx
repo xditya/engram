@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { goHome } from '../../lib/nav';
 import { useTheme } from '../../theme/useTheme';
 import { Screen, Text } from '../../ui';
 import { useSettings } from '../../lib/engram';
@@ -11,7 +12,7 @@ export const STEPS = 5;
 export function useFinish() {
   const router = useRouter();
   const update = useSettings((s) => s.update);
-  return () => { update({ onboarded: true }); router.replace('/'); };
+  return () => { update({ onboarded: true }); goHome(); };
 }
 
 // Shared frame: 2 px determinate line on top, "Skip" top-right, scrolling body, optional pinned footer.

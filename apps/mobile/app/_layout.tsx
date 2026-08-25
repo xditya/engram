@@ -2,8 +2,9 @@ import '../src/polyfills';
 import { useCallback, useEffect, useState } from 'react';
 import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Modal, Pressable, View } from 'react-native';
+import { Modal, Platform as RN, Pressable, View } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
+import { goHome } from '../src/lib/nav';
 import * as Linking from 'expo-linking';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -67,7 +68,7 @@ function useCaptureIntents() {
     const target = typeof queryParams?.url === 'string' ? queryParams.url : null;
     if (!target) return;
     engram.capture.saveUrl(target, { note: typeof queryParams?.note === 'string' ? queryParams.note : undefined })
-      .then(() => { show('Saved'); router.replace('/'); })
+      .then(() => { show('Saved'); goHome(); })
       .catch((e) => show(`Couldn't save: ${(e as Error).message}`));
   }, [engram, url]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -76,7 +77,7 @@ function useCaptureIntents() {
     <Modal transparent animationType="slide" onRequestClose={() => setIntent(null)}>
       <Pressable onPress={() => setIntent(null)} style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' }}>
         <Pressable onPress={() => {}}>
-          <ShareSheet intent={intent} onDone={(items) => { setIntent(null); saved(items.map((i) => i.id)); router.replace('/'); }} />
+          <ShareSheet intent={intent} onDone={(items) => { setIntent(null); saved(items.map((i) => i.id)); goHome(); }} />
         </Pressable>
       </Pressable>
     </Modal>
@@ -159,7 +160,7 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: c.bg }}>
       <StatusBar style={dark ? 'light' : 'dark'} />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg }, animation: 'fade' }}>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg }, animation: RN.OS === 'android' ? 'slide_from_right' : 'default' }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="search" options={sheet} />
         <Stack.Screen name="card/[id]" options={sheet} />

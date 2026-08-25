@@ -52,6 +52,7 @@ function Photo({ item, showText }: { item: Item; showText?: boolean }) {
       {/* ponytail: ScrollView pinch-zoom is iOS-only; use react-native-zoom-toolkit when Android zoom matters */}
       <ScrollView maximumZoomScale={4} minimumZoomScale={1} centerContent contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}>
         {file ? <Image source={{ uri: file.uri }} contentFit="contain" style={{ width, height: width / ratio }} accessibilityLabel={item.title ?? 'Image'} /> : null}
+        {item.body ? <Text size="sm" lineHeight="body" color="text2" selectable style={{ paddingHorizontal: space[5], paddingTop: space[4], paddingBottom: 120 }}>{item.body}</Text> : null}
       </ScrollView>
       {showText ? (
         <ScrollView style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: c.bg }} contentContainerStyle={{ padding: space[5], paddingBottom: 120 }}>

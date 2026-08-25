@@ -29,7 +29,8 @@ export function describe(s: ShareIntentLike): { type: ItemType; title: string; m
       : /^(mp4|mov|webm|mkv|avi)$/.test(ext) || /\/video\//.test(p) ? 'video'
       : ext === 'pdf' ? 'pdf' : 'file';
     const name = p.split('/').pop() ?? kind;
-    return { type: kind === 'file' ? 'image' : kind, title: n > 1 ? `${n} files` : name, meta: n > 1 ? `${n} files` : kind };
+    const caption = s.text?.trim().split('\n')[0]?.slice(0, 80);
+    return { type: kind === 'file' ? 'image' : kind, title: caption || (n > 1 ? `${n} files` : name), meta: n > 1 ? `${n} files` : kind };
   }
   return { type: 'note', title: (s.text ?? '').trim().split('\n')[0]!.slice(0, 80), meta: 'note' };
 }

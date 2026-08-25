@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { View } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
+import { goHome } from '../../src/lib/nav';
 import { useEngram, useSettings, useToast } from '../../src/lib/engram';
 import { estimate, modelOf, KEY_PAGES } from '../../src/features/settings/intelligence';
 import { read, run, sourceName, type Picked, type Progress, type Tagging } from '../../src/features/settings/importer';
@@ -51,7 +52,7 @@ export default function Import() {
             <>
               <Text size="md" weight={500}>Imported {n(prog.cards)} cards.</Text>
               {tagging === 'now' ? <Text size="sm" color="text2">Tagging runs in the background.</Text> : null}
-              <Button title="Back to library" onPress={() => router.replace('/')} />
+              <Button title="Back to library" onPress={() => goHome()} />
             </>
           ) : null}
         </View>

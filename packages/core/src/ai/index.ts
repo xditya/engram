@@ -4,7 +4,7 @@ export { createProvider, createEmbedder, anthropic, gemini, openaiCompatible, on
 export type { Preset, PresetId } from './providers/openaiCompatible';
 export { classifyPrompt, classifyUser, itemText, DESCRIBE_IMAGE_SYSTEM, ITEM_TYPES } from './prompts';
 export type { Correction } from './prompts';
-export { classify, cleanTags } from './jobs/classify';
+export { classify, cleanTags, weakTitle } from './jobs/classify';
 export type { ClassifyPatch } from './jobs/classify';
 export { embed, embedText, vecToBlob, blobToVec } from './jobs/embed';
 export type { EmbedPatch } from './jobs/embed';

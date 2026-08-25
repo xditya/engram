@@ -7,7 +7,7 @@ import { reorderSpaces, spaceItems } from '../../src/features/spaces/spaces';
 import { thumbOf } from '../../src/features/spaces/thumb';
 import { engram, useLiveQuery } from '../../src/lib/engram';
 import { useTheme } from '../../src/theme/useTheme';
-import { Button, Screen, Text } from '../../src/ui';
+import { Button, Screen, Text, BackButton } from '../../src/ui';
 
 export default function Spaces() {
   const { space } = useTheme();
@@ -29,11 +29,9 @@ export default function Spaces() {
   };
   return (
     <Screen>
-      <View style={{ height: 52, flexDirection: 'row', alignItems: 'center', paddingHorizontal: space[2] }}>
-        <Pressable accessibilityLabel="Back" accessibilityRole="button" onPress={() => router.back()} style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
-          <Text size="lg" color="text2">‹</Text>
-        </Pressable>
-        <Text weight={600} style={{ flex: 1 }}>Spaces</Text>
+      <View style={{ height: 56, flexDirection: 'row', alignItems: 'center', paddingHorizontal: space[2], gap: space[1] }}>
+        <BackButton />
+        <Text size="xl" weight={600} style={{ flex: 1 }}>Spaces</Text>
         {data?.spaces.length ? (
           <Pressable accessibilityRole="button" onPress={() => setCreating(true)} style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: space[2] }}>
             <Text size="sm" weight={500} color="accent">New Space</Text>

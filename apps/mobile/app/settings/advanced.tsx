@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Alert, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { goHome } from '../../src/lib/nav';
 import { DEFAULTS } from '../../src/lib/settings';
 import { useEngram, useSettings, useToast } from '../../src/lib/engram';
 import { backfill, costLine, modelOf, startBackfill } from '../../src/features/settings/intelligence';
@@ -48,7 +49,7 @@ export default function Advanced() {
       useSettings.getState().update({ ...DEFAULTS, onboarded: true });
       engram.events.emit();
       show('Reset');
-      router.replace('/');
+      goHome();
     } },
   ]);
 

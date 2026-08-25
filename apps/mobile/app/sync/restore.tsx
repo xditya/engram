@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { ScrollView, TextInput, View } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
+import { goHome } from '../../src/lib/nav';
 import { Header } from '../../src/features/sync/Header';
 import { isWord } from '../../src/features/sync/lib';
 import { useEngram, useSettings } from '../../src/lib/engram';
@@ -41,7 +42,7 @@ export default function Restore() {
       if (!engine) throw new Error('Choose the storage your library lives in first.');
       await engine.updateManifest(); // fails on a key that doesn't fit this store
       void engram.sync.syncNow();
-      router.replace('/');
+      goHome();
     } catch (e) {
       await engram.sync.masterKey.clear();
       const mismatch = /key mismatch|bad manifest|invalid recovery|invalid tag/i.test((e as Error).message);

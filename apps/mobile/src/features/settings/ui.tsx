@@ -3,7 +3,7 @@ import { Children, Fragment } from 'react';
 import { Pressable, ScrollView, Switch, TextInput, View, type TextInputProps } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../../theme/useTheme';
-import { Hairline, Screen, Text } from '../../ui';
+import { Hairline, Screen, Text, BackButton } from '../../ui';
 
 // Settings page: back chevron + title, then a scrolling column with 16 px gutters.
 export function Page({ title, children }: { title: string; children: ReactNode }) {
@@ -11,11 +11,9 @@ export function Page({ title, children }: { title: string; children: ReactNode }
   const router = useRouter();
   return (
     <Screen>
-      <View style={{ flexDirection: 'row', alignItems: 'center', height: 52, paddingHorizontal: space[2] }}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => router.back()} hitSlop={8} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
-          <Text size="sm" color="text2">‹</Text>
-        </Pressable>
-        <Text weight={600}>{title}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', height: 56, paddingHorizontal: space[2], gap: space[1] }}>
+        <BackButton />
+        <Text size="xl" weight={600} numberOfLines={1} style={{ flex: 1 }}>{title}</Text>
       </View>
       <ScrollView contentContainerStyle={{ paddingHorizontal: space[3], paddingBottom: space[7], gap: space[5] }} keyboardShouldPersistTaps="handled">
         {children}

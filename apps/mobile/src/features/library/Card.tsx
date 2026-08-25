@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
 import { Image } from 'expo-image';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { extract } from '@engram/core';
+import { ai, extract } from '@engram/core';
 import { Trace } from '../../icons/Icon';
 import { useTheme } from '../../theme/useTheme';
 import { Fade, Text } from '../../ui';
@@ -44,7 +44,16 @@ export function Card({ entry, width, selecting, selected, showTrace, fresh, onPr
   // An image card with nothing to show yet (thumb still downloading, or none found) reads as a link card instead.
   switch (item.type === 'image' && !img && (item.title || item.url) ? 'link' : item.type) {
     case 'image':
-      body = img ?? block(1);
+      // A captioned image (shared with text) shows the caption under the picture; a bare photo is just the picture.
+      body = img && (item.body || !ai.weakTitle(item)) ? (
+        <View>
+          {img}
+          <View style={{ paddingHorizontal: pad, paddingTop: pad, paddingBottom: bottom, gap: 4 }}>
+            {!ai.weakTitle(item) ? title(item.title!) : null}
+            {item.body ? <Text size="xs" color="text2" numberOfLines={2}>{item.body}</Text> : null}
+          </View>
+        </View>
+      ) : img ?? block(1);
       break;
     case 'note':
       body = (

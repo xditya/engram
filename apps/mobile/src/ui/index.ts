@@ -7,3 +7,4 @@ export { Sheet, useKeyboardHeight } from './Sheet';
 export { ProgressLine } from './ProgressLine';
 export { Hairline } from './Hairline';
 export { Fade } from './Fade';
+export { BackButton } from './BackButton';

@@ -3,7 +3,7 @@ import { memoryDb } from './helpers/db';
 import type { Item, IntelligenceSettings, Job } from '../src/model/types';
 import {
   anthropic, gemini, openaiCompatible, createProvider, createEmbedder, classify, embed, describeImage, blobToVec,
-  estimateCost, estimateTokens, createQueue, classifyPrompt, type Fetch, type Provider,
+  estimateCost, estimateTokens, createQueue, classifyPrompt, weakTitle, type Fetch, type Provider,
 } from '../src/ai';
 
 type Call = { url: string; init: any; body: any };
@@ -238,5 +238,29 @@ describe('queue', () => {
     s.q.reenqueueSkipped();
     await s.q.tick();
     expect(s.jobs()[0]!.status).toBe('done');
+  });
+});
+
+describe('weakTitle', () => {
+  const w = (title: string | null, body: string | null = null, domain: string | null = null) => weakTitle({ title, body, domain });
+  it('placeholders are weak', () => {
+    expect(w(null)).toBe(true);
+    expect(w('example.com', null, 'example.com')).toBe(true);
+    expect(w('IMG_2041.jpg')).toBe(true);
+    expect(w('Screenshot 2026')).toBe(true);
+    expect(w('Things to remember for the trip and')).toBe(true);
+    expect(w('Groceries:')).toBe(true);
+    expect(w('x'.repeat(80))).toBe(true);
+  });
+  it('real titles are kept', () => {
+    expect(w('Sourdough basics')).toBe(false);
+    expect(w('Groceries', 'Groceries\nmilk\neggs')).toBe(false);
+    expect(w('Trip notes.', 'Trip notes.\nmore')).toBe(false);
+  });
+  it('classify replaces only a weak title', async () => {
+    const { fetch } = fakeFetch(() => ({ content: [{ type: 'text', text: '{"type":"note","tags":["a"],"title":"Trip packing list"}' }] }));
+    const p = anthropic({ apiKey: 'k', fetch });
+    expect((await classify(p, item({ title: 'IMG_1.jpg', domain: null }))).title).toBe('Trip packing list');
+    expect((await classify(p, item())).title).toBeUndefined();
   });
 });

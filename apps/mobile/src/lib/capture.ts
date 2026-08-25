@@ -1,5 +1,5 @@
 import { File } from 'expo-file-system';
-import { extract, media, sync, type Database, type EngramDb, type Item, type ItemType, type JobKind, type Queue } from '@engram/core';
+import { ai, extract, media, sync, type Database, type EngramDb, type Item, type ItemType, type JobKind, type Queue } from '@engram/core';
 import { addFile, type JobCtx } from './jobs';
 
 export type CaptureOpts = { note?: string; tags?: string[]; html?: string };
@@ -71,7 +71,17 @@ export function createCapture(ctx: Pick<JobCtx, 'platform' | 'db'> & { queue: Pi
     // What the share sheet / share intent hands us. Returns what was saved (possibly several files).
     async fromShareIntent(s: ShareIntentLike): Promise<Item[]> {
       if (s.webUrl) return [await capture.saveUrl(s.webUrl, { note: s.text && s.text !== s.webUrl ? s.text : undefined })];
-      if (s.files?.length) return capture.saveFiles(s.files.map((f) => f.path));
+      if (s.files?.length) {
+        const items = await capture.saveFiles(s.files.map((f) => f.path));
+        // Image + caption (Photos, Instagram, WhatsApp): the caption is the card's text; a caption whose first line
+        // stands on its own becomes the title now, otherwise classify writes one.
+        const caption = s.text?.trim();
+        if (caption && items[0] && caption !== s.webUrl) {
+          const line = firstLine(caption);
+          db.items.update(items[0].id, { body: caption, ...(ai.weakTitle({ title: line, body: caption, domain: null }) ? {} : { title: line }) });
+        }
+        return items;
+      }
       const text = s.text?.trim();
       if (!text) return [];
       if (isUrl(text)) return [await capture.saveUrl(text)];

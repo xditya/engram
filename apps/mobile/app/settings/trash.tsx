@@ -4,7 +4,7 @@ import type { Item } from '@engram/core';
 import { useEngram, useLiveQuery, useToast } from '../../src/lib/engram';
 import { InlineButton, n } from '../../src/features/settings/ui';
 import { useTheme } from '../../src/theme/useTheme';
-import { Hairline, Screen, Text } from '../../src/ui';
+import { Hairline, Screen, Text, BackButton } from '../../src/ui';
 import { useRouter } from 'expo-router';
 import { Pressable } from 'react-native';
 
@@ -22,11 +22,9 @@ export default function Trash() {
 
   return (
     <Screen>
-      <View style={{ flexDirection: 'row', alignItems: 'center', height: 52, paddingHorizontal: space[2] }}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => router.back()} hitSlop={8} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
-          <Text size="xl" color="text2">‹</Text>
-        </Pressable>
-        <Text weight={600}>Let go</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', height: 56, paddingHorizontal: space[2], gap: space[1] }}>
+        <BackButton />
+        <Text size="xl" weight={600} style={{ flex: 1 }}>Let go</Text>
         {items.length ? <Text size="xs" mono color="text3" style={{ marginLeft: 'auto', marginRight: space[3] }}>{n(items.length)}</Text> : null}
       </View>
       <Text size="sm" color="text2" style={{ paddingHorizontal: space[4], paddingBottom: space[3] }}>

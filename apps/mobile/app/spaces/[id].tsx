@@ -7,7 +7,7 @@ import { deleteSpace, exportSpace, setSpace, spaceItems } from '../../src/featur
 import { Icon } from '../../src/icons/Icon';
 import { engram, useLiveQuery, useSettings, useToast } from '../../src/lib/engram';
 import { useTheme } from '../../src/theme/useTheme';
-import { Screen, Text } from '../../src/ui';
+import { Screen, Text, BackButton } from '../../src/ui';
 
 // Library filtered by one Space: its query hits plus cards added by hand.
 export default function SpaceScreen() {
@@ -35,11 +35,9 @@ export default function SpaceScreen() {
 
   return (
     <Screen>
-      <View style={{ height: 52, flexDirection: 'row', alignItems: 'center', paddingHorizontal: space[2], gap: space[1] }}>
-        <Pressable accessibilityLabel="Back" accessibilityRole="button" onPress={() => router.back()} style={iconBtn}>
-          <Text size="lg" color="text2">‹</Text>
-        </Pressable>
-        <Text weight={600} numberOfLines={1} style={{ flex: 1 }}>{data?.space.name ?? ''}</Text>
+      <View style={{ height: 56, flexDirection: 'row', alignItems: 'center', paddingHorizontal: space[2], gap: space[1] }}>
+        <BackButton />
+        <Text size="xl" weight={600} numberOfLines={1} style={{ flex: 1 }}>{data?.space.name ?? ''}</Text>
         <Pressable accessibilityLabel={view === 'grid' ? 'Show as list' : 'Show as grid'} accessibilityRole="button" onPress={() => patch('ui', { view: view === 'grid' ? 'list' : 'grid' })} style={iconBtn}>
           <Icon name={view === 'grid' ? 'view-list' : 'view-grid'} />
         </Pressable>
