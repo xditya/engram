@@ -3,6 +3,7 @@ import * as Application from 'expo-application';
 import Constants from 'expo-constants';
 import { Icon, Trace } from '../../src/icons/Icon';
 import { Group, Page } from '../../src/features/settings/ui';
+import { currentTag } from '../../src/lib/updates';
 import { useTheme } from '../../src/theme/useTheme';
 import { Row, Text } from '../../src/ui';
 
@@ -27,7 +28,7 @@ export default function About() {
         <Trace size={44} color={c.accent} />
         <Text size="xl" weight={600}>engram</Text>
         <Text size="sm" color="text2">Remember everything. Own everything.</Text>
-        <Text size="xs" mono color="text3">{build ? `${version} (${build})` : version}</Text>
+        <Text size="xs" mono color="text3">{build ? `${version} (${build})` : version}{currentTag ? ` · ${currentTag}` : ''}</Text>
       </View>
 
       <Group label="Made by">
@@ -54,7 +55,7 @@ export default function About() {
       <Group label="Project">
         <Row title="Website" value="engram.xditya.me" onPress={open(SITE)} />
         <Row title="Source code" value="github" onPress={open('https://github.com/xditya/engram')} />
-        <Row title="Export format" onPress={open(`${SITE}/export-format`)} />
+        <Row title="Export format" subtitle="What is inside the zip, so you can leave any time" onPress={open(`${SITE}/export-format.html`)} />
         <Row title="Licence" value="AGPL-3.0" onPress={open('https://github.com/xditya/engram/blob/main/LICENSE')} />
       </Group>
     </Page>

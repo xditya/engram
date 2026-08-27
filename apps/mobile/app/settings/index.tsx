@@ -7,11 +7,19 @@ import { KEY_PAGES } from '../../src/features/settings/intelligence';
 import { phraseSaved } from '../../src/features/sync/lib';
 import { Group, Page, hhmm, n } from '../../src/features/settings/ui';
 import { Row } from '../../src/ui';
+import { useToast } from '../../src/lib/toast';
+import { currentTag, useUpdates } from '../../src/lib/updates';
 
 const SYNC_NAME = { off: 'This device only', gdrive: 'Google Drive', icloud: 'iCloud', webdav: 'server' };
 
 export default function Settings() {
   const router = useRouter();
+  const show = useToast((s) => s.show);
+  const upd = useUpdates();
+  const checkUpdates = () => {
+    if (upd.latest) { upd.setOpen(true); return; }
+    void upd.check(true).then((r) => show(r === 'newer' ? `engram ${useUpdates.getState().latest?.tag} is out` : r === 'current' ? "You're on the latest build" : r === 'offline' ? "Couldn't reach GitHub" : 'This build has no release to compare against'));
+  };
   const { engram } = useEngram();
   const s = useSettings();
   const sync = useSyncStatus();
@@ -48,6 +56,7 @@ export default function Settings() {
         <Row title="Let go" subtitle="Recoverable for 30 days" value={trashed ? n(trashed) : undefined} onPress={go('/settings/trash')} />
         <Row title="Appearance" value={scheme === 'system' ? 'System' : scheme === 'dark' ? 'Dark' : 'Light'} onPress={go('/settings/appearance')} />
         <Row title="Advanced" onPress={go('/settings/advanced')} />
+        <Row title="Updates" subtitle={upd.latest ? `engram ${upd.latest.tag} is available` : currentTag ? `This build: ${currentTag}` : 'Development build'} value={upd.checking ? 'Checking…' : upd.latest ? "What's new" : 'Check'} onPress={checkUpdates} />
         <Row title="About" onPress={go('/settings/about')} />
       </Group>
       {phraseUnsaved ? (

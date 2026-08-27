@@ -19,6 +19,8 @@ import { listenForScreenshots, saveLatestScreenshot, useScreenshotPrompt } from 
 import { useShake } from '../src/lib/useShake';
 import { useShareLog } from '../src/lib/shareLog';
 import { sharedPasteboardInfo, takeSharedPasteboard } from '../modules/engram-diag';
+import { UpdateSheet } from '../src/features/settings/UpdateSheet';
+import { useUpdates } from '../src/lib/updates';
 import * as Haptics from 'expo-haptics';
 import { Text } from '../src/ui';
 import '../src/features/settings/appearance';
@@ -141,6 +143,7 @@ function Overlays() {
     <View pointerEvents="box-none" style={{ position: 'absolute', left: space[4], right: space[4], bottom: insets.bottom + 16 + Math.round(56 * uiScale) + 12, gap: space[2] }}>
       <ScreenshotPrompt />
       <Toast />
+      <UpdateSheet />
     </View>
   );
 }
@@ -153,6 +156,20 @@ export default function RootLayout() {
 
   useEffect(() => { if (ready) SplashScreen.hideAsync(); }, [ready]);
   useEffect(() => { if (engram) listenForScreenshots(); }, [engram]);
+  // Once per open (throttled to 6 h inside): a newer release gets one toast, dismissed per tag.
+  const show = useToast((s) => s.show);
+  useEffect(() => {
+    if (!engram) return;
+    const t = setTimeout(() => {
+      void useUpdates.getState().check().then((r) => {
+        const u = useUpdates.getState();
+        if (r !== 'newer' || !u.latest || u.dismissedTag === u.latest.tag) return;
+        show(`engram ${u.latest.tag} is out`, 6000, { label: "What's new", onPress: () => u.setOpen(true) });
+        u.dismiss();
+      });
+    }, 4000);
+    return () => clearTimeout(t);
+  }, [engram, show]);
   const shareSheet = useCaptureIntents();
 
   if (!ready) return null;

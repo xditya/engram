@@ -48,6 +48,12 @@ export function parseMarkdown(text: string): Block[] {
     if ((m = BULLET.exec(line))) { flush(); blocks.push({ kind: 'bullet', inline: parseInline(m[2]!), line: i, depth: Math.floor(m[1]!.length / 2) }); return; }
     if ((m = NUMBER.exec(line))) { flush(); blocks.push({ kind: 'number', n: Number(m[2]), inline: parseInline(m[3]!), line: i, depth: Math.floor(m[1]!.length / 2) }); return; }
     if (line.startsWith('>')) { flush(); blocks.push({ kind: 'quote', inline: parseInline(line.replace(/^>\s?/, '')), line: i }); return; }
+    // An indented line right after a list item is that item wrapping onto a new line, not a new paragraph.
+    const last = blocks[blocks.length - 1];
+    if (!para && /^\s{2,}\S/.test(raw) && last && (last.kind === 'bullet' || last.kind === 'number' || last.kind === 'todo')) {
+      last.inline = parseInline([...last.inline.map((p) => ('href' in p ? `[${p.text}](${p.href})` : p.kind === 'bold' ? `**${p.text}**` : p.kind === 'code' ? `\`${p.text}\`` : p.kind === 'italic' ? `*${p.text}*` : p.text)).join(''), line.trim()].join(' '));
+      return;
+    }
     if (para) para.lines.push(line); else para = { start: i, lines: [line] };
   });
   flush();

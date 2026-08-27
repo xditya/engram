@@ -10,6 +10,11 @@ describe('parseMarkdown', () => {
     expect((b[3] as { depth: number }).depth).toBe(1);
     expect((b[7] as { line: number }).line).toBe(8);
   });
+  it('joins an indented continuation line onto the list item above', () => {
+    const b = parseMarkdown('- **Android** apk is signed. Fine for\n  sideloading, not the Play Store.\n- next');
+    expect(b.map((x) => x.kind)).toEqual(['bullet', 'bullet']);
+    expect((b[0] as { inline: { text: string }[] }).inline.map((i) => i.text).join('')).toBe('Android apk is signed. Fine for sideloading, not the Play Store.');
+  });
   it('parses inline emphasis, code and links', () => {
     expect(parseInline('a **b** `c` [d](https://e.com) https://f.com _g_').map((i) => i.kind)).toEqual(['text', 'bold', 'text', 'code', 'text', 'link', 'text', 'link', 'text', 'italic']);
   });
