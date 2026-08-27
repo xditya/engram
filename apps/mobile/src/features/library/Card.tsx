@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
 import { Image } from 'expo-image';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { ai, extract } from '@engram/core';
+import { ai, extract, notes } from '@engram/core';
 import { Trace } from '../../icons/Icon';
 import { useTheme } from '../../theme/useTheme';
 import { Fade, Text } from '../../ui';
@@ -58,7 +58,7 @@ export function Card({ entry, width, selecting, selected, showTrace, fresh, onPr
     case 'note':
       body = (
         <View style={{ paddingHorizontal: pad, paddingTop: pad, paddingBottom: bottom }}>
-          <Text size="sm" lineHeight="body" numberOfLines={6}>{item.body ?? item.title ?? ''}</Text>
+          <Text size="sm" lineHeight="body" numberOfLines={6}>{notes.markdownToPlain(item.body ?? item.title ?? '')}</Text>
           <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, bottom: bottom, height: 18 }}><Fade color={c.surface} solidAt={1} /></View>
         </View>
       );

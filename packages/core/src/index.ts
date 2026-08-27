@@ -28,3 +28,4 @@ export type { Fetch, Preset, PresetId, Queue, QueueOptions, QueueWriter, Correct
 export type { ImportedCard, ImportResult, ExportData, ExportFile, ImportFormat } from './importExport';
 export type { NamedColor } from './media';
 export type { SyncEngine, SyncOpts, BlobPolicy, Cursors, GcResult, InboxItem } from './sync';
+export * as notes from './notes/markdown';
