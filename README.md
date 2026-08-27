@@ -24,7 +24,15 @@ It is a free, open source answer to apps like mymind, with two differences that 
 
 **Tags without a model.** Every save gets tags on its own: proper nouns and repeated terms from the page, text read out of images, the site it came from, and any tag you already use that matches. With Intelligence turned on, the model you chose adds richer tags, a short summary, and semantic search on top. Tags the model adds look and behave like your own.
 
-**Search that reads the whole page.** Articles are saved with their full text and indexed, so a search finds the word inside the piece and not only in the title. Operators narrow things down: `tag:`, `type:`, `site:`, `text:`, `before:`, `after:`, quoted phrases, and `-` to exclude. Press Enter to turn a term into a chip and keep typing. A search you want to keep becomes a Space.
+**Previews for the links you actually save.** Instagram posts and reels, YouTube, TikTok, Reddit, Threads, Spotify, Giphy and most pages come in with a title and an image, even the ones that show browsers an empty shell. The words on a preview image (the hook on a reel, the title on a slide) are read with on-device OCR, so "stop making boring websites" finds the reel that says it on screen. Imports and restores fetch previews they are missing on their own.
+
+**Search that reads the whole page.** Articles are saved with their full text and indexed, so a search finds the word inside the piece and not only in the title. Operators narrow things down: `tag:`, `type:`, `site:`, `text:`, `before:`, `after:`, quoted phrases, and `-` to exclude. Press Enter to turn a term into a chip and keep typing. A search you want to keep becomes a Space. A `?` next to the operators explains each one.
+
+**Ask your library.** Type a question in search ("which reel mentioned Claude Code?", "summarise what I saved about fonts") and the model answers from your cards, citing them; tap a citation to open the card. Nothing outside your library is used, and when nothing matches it says so. Works with your own key, or slowly with the on-device model.
+
+**Notes that turn into lists.** Write a note in markdown (headings, bullets, `- [ ]` checkboxes, bold) and it opens formatted, with checkboxes you can tick. Tap a line to edit just that line. Type a plain list and engram offers to Prettify it into a titled checklist, with the model if you have one set up, without changing a word. Undo is one tap.
+
+**Cards you can act on.** Open, Copy and Share sit at the bottom of every card; shared links go out as text with a "via engram" line. Details, tags, Spaces, Pin and Let go are one swipe up. Tap a tag to search it, hold to remove it.
 
 **Screenshots.** On Android, turn on *Watch for screenshots* and every screenshot you take shows a quiet banner asking whether to keep it. Tap Save and the same sheet opens with the image. iOS cannot watch in the background; engram offers to save a screenshot taken while the app is open.
 
@@ -36,7 +44,7 @@ It is a free, open source answer to apps like mymind, with two differences that 
 
 ## Install the app
 
-Builds are published on the [Releases](../../releases) page. The Android APK is signed with the Expo debug keystore, which is fine for sideloading. The iOS build is unsigned; install it with a tool that signs on install, such as AltStore or Sideloadly.
+Builds are on [engram.xditya.me/releases.html](https://engram.xditya.me/releases.html) (fed from the [Releases](../../releases) page). The Android APK is signed with the Expo debug keystore, which is fine for sideloading. The iOS build is unsigned; install it with a tool that signs on install, such as AltStore, SideStore or Sideloadly. On a free Apple ID the app re-signs every 7 days and the share extension hands saves to the app instead of saving in place.
 
 Expo Go cannot run engram. The app uses native modules (SQLite with full text search, the share activity, OCR, the screenshot watcher), so it needs a real build.
 
