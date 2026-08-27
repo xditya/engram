@@ -89,6 +89,8 @@ export async function run(e: Engram, p: Picked, tagging: Tagging, onProgress: (x
     });
     if (card.tags.length) db.tags.set(item.id, [...new Set(card.tags)], 'import');
     const kinds: JobKind[] = [...tagKinds];
+    // A link card needs extract for its title, text and preview image; extract queues tagging itself afterwards.
+    if (url && card.type !== 'image' && card.type !== 'video') kinds.unshift('extract');
     if (bytes) {
       await addFile(e, item.id, 'original', bytes, mime);
       prog.files++;

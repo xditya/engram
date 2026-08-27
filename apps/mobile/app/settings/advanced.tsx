@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Alert, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { goHome } from '../../src/lib/nav';
+import { repairPreviews } from '../../src/lib/previews';
 import { DEFAULTS } from '../../src/lib/settings';
 import { useEngram, useSettings, useToast } from '../../src/lib/engram';
 import { backfill, costLine, modelOf, startBackfill } from '../../src/features/settings/intelligence';
@@ -34,7 +35,7 @@ export default function Advanced() {
     const ids = sql.query<{ item_id: string }>("SELECT DISTINCT item_id FROM files WHERE role IN ('original','poster') AND deleted_at IS NULL");
     for (const { item_id } of ids) engram.queue.enqueueFor(item_id, ['thumb']);
     void engram.drain();
-    show(`Rebuilding ${n(ids.length)} thumbnails`);
+    show(`Rebuilding ${n(ids.length)} ${ids.length === 1 ? 'thumbnail' : 'thumbnails'} from your photos and videos`);
   };
 
   const reset = () => Alert.alert('Reset engram on this device', 'Removes every card, file, key and setting from this phone. Other devices and your sync storage are not touched.', [
@@ -63,7 +64,8 @@ export default function Advanced() {
       </Group>
       <Group label="Library">
         <Row title="Re-tag library" subtitle="Runs Intelligence over every save again" onPress={retag} />
-        <Row title="Rebuild thumbnails" onPress={rebuildThumbs} />
+        <Row title="Fetch missing previews" subtitle="Imported or restored cards that never got their image" onPress={() => { if (!engram) return; void repairPreviews(engram, { force: true }).then((r) => show(r.extract || r.blobs ? `Fetching ${n(r.extract)} previews · ${n(r.blobs)} images` : 'Every card has its preview')); }} />
+        <Row title="Rebuild thumbnails" subtitle="Photos and videos you added. Link previews are fetched above." onPress={rebuildThumbs} />
       </Group>
       <Group label="Diagnostics">
         <Row title="Share diagnostics" subtitle="What the share sheet hand-off sees on this device" onPress={() => router.push('/settings/share-diagnostics' as never)} />

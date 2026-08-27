@@ -8,6 +8,7 @@ import { ocr } from '../platform/ocr';
 import { createOnDevice, onDeviceUnavailableReason } from '../platform/onDevice';
 import { createCapture } from './capture';
 import { createJobs } from './jobs';
+import { repairPreviews } from './previews';
 import { createSecrets } from './secrets';
 import { getSettings, useSettings } from './settings';
 import { createSyncService } from './sync';
@@ -76,7 +77,8 @@ export async function createEngram(): Promise<Engram> {
     if (await od.ready()) { queue.reenqueueSkipped(); void drain(); }
   };
 
-  const sync = createSyncService({ platform, db, secrets, afterSync: drain });
+  // After a sync, restored file rows may still lack bytes and pulled links may lack previews; repair before draining.
+  const sync = createSyncService({ platform, db, secrets, afterSync: async () => { await repairPreviews(api).catch(() => {}); await drain(); } });
   const capture = createCapture({ platform, db, queue, sql: platform.db, drain });
 
   // Sync triggers: local writes (debounced 5 s), connectivity, foreground, background task.
@@ -95,8 +97,10 @@ export async function createEngram(): Promise<Engram> {
   )) queue.enqueueFor(id, ['autotag']);
   void drain();
   void loadOnDevice();
+  setTimeout(() => { void repairPreviews(api).catch(() => {}); }, 3000);
 
-  return { platform, db, queue, capture, sync, secrets, deviceId, events, drain, onDeviceReason };
+  const api = { platform, db, queue, capture, sync, secrets, deviceId, events, drain, onDeviceReason };
+  return api;
 }
 
 // Boot once, app-wide. Screens read it through useEngram(); non-React code through getEngram().
