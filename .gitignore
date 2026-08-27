@@ -10,3 +10,4 @@ coverage/
 *.orig
 .DS_Store
 apps/mobile/modules/*/android/build/
+.gradle/
