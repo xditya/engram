@@ -47,15 +47,15 @@ describe('providers', () => {
     const p = gemini({ apiKey: 'g', fetch });
     const d = await describeImage(p, item({ type: 'image', meta: '{"w":1}' }), { image: { bytes: new Uint8Array([1, 2, 3]), mime: 'image/png' } });
     expect(d).toEqual({ summary: 'A loaf', tags: ['bread'], meta: '{"w":1,"caption":"A loaf"}' });
-    expect(calls[0]!.url).toBe('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent');
+    expect(calls[0]!.url).toBe('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent');
     expect(calls[0]!.init.headers['x-goog-api-key']).toBe('g');
     expect(calls[0]!.body.generationConfig.responseMimeType).toBe('application/json');
     expect(calls[0]!.body.contents[0].parts[0].inlineData).toEqual({ mimeType: 'image/png', data: 'AQID' });
     const e = await embed(p, item());
     expect(e.embedding_dim).toBe(768);
-    expect(e.embedding_model).toBe('text-embedding-004');
+    expect(e.embedding_model).toBe('gemini-embedding-001');
     expect(blobToVec(e.embedding)[3]).toBeCloseTo(0.5);
-    expect(calls[1]!.body.requests[0].model).toBe('models/text-embedding-004');
+    expect(calls[1]!.body.requests[0].model).toBe('models/gemini-embedding-001');
   });
 
   it('openai-compatible: response_format on presets that support it, bearer key, embeddings ordered, models test', async () => {

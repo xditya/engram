@@ -5,8 +5,8 @@ const BASE = 'https://generativelanguage.googleapis.com/v1beta';
 export const GEMINI_EMBED_DIM = 768;
 
 export function gemini(opts: { apiKey: string; chatModel?: string; embedModel?: string; fetch: Fetch }): Provider {
-  const chat = opts.chatModel ?? 'gemini-2.0-flash';
-  const embedModel = opts.embedModel ?? 'text-embedding-004';
+  const chat = opts.chatModel ?? 'gemini-3.6-flash';
+  const embedModel = opts.embedModel ?? 'gemini-embedding-001';
   const headers = { 'x-goog-api-key': opts.apiKey };
   return {
     id: 'gemini',
@@ -24,7 +24,8 @@ export function gemini(opts: { apiKey: string; chatModel?: string; embedModel?: 
     },
     async embed(texts) {
       const res = await postJson(opts.fetch, `${BASE}/models/${embedModel}:batchEmbedContents`, headers, {
-        requests: texts.map((t) => ({ model: `models/${embedModel}`, content: { parts: [{ text: t }] } })),
+        // gemini-embedding-001 returns 3072 values unless told otherwise; 768 keeps vectors the size search expects.
+        requests: texts.map((t) => ({ model: `models/${embedModel}`, content: { parts: [{ text: t }] }, outputDimensionality: GEMINI_EMBED_DIM })),
       });
       const vectors = (res.embeddings as { values: number[] }[]).map((e) => Float32Array.from(e.values));
       return { vectors, model: embedModel, dim: vectors[0]?.length ?? GEMINI_EMBED_DIM };

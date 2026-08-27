@@ -4,7 +4,7 @@ import { PRESETS } from './providers/openaiCompatible';
 // USD per 1M tokens [input, output]. Rough; edit freely. Unknown models fall back to the provider's '*'.
 export const PRICE: Partial<Record<ProviderId, Record<string, [number, number]>>> = {
   anthropic: { '*': [0.8, 4], 'claude-3-5-haiku-latest': [0.8, 4], 'claude-sonnet-4-5': [3, 15] },
-  gemini: { '*': [0.1, 0.4], 'gemini-2.0-flash': [0.1, 0.4], 'text-embedding-004': [0, 0] },
+  gemini: { '*': [0.1, 0.4], 'gemini-3.6-flash': [0.1, 0.4], 'gemini-embedding-001': [0, 0] },
   openai: { '*': [0.15, 0.6], 'gpt-4o-mini': [0.15, 0.6], 'gpt-4o': [2.5, 10], 'text-embedding-3-small': [0.02, 0] },
   openrouter: { '*': [0.15, 0.6] },
   groq: { '*': [0.05, 0.08] },
