@@ -11,7 +11,8 @@ export async function tidyNote(text: string): Promise<{ text: string; by: 'model
     const words = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter(Boolean);
     const before = new Set(words(text)), after = words(out);
     const kept = after.filter((w) => before.has(w)).length;
-    if (out && notes.looksLikeMarkdown(out) && kept >= before.size * 0.9 && after.length <= before.size * 1.3) return { text: out, by: 'model' };
+    // A plain list of items is a checklist whatever the model decided; it only chooses when the note reads as prose.
+    if (out && notes.looksLikeMarkdown(out) && kept >= before.size * 0.9 && after.length <= before.size * 1.3) return { text: notes.looksTidyable(text) ? notes.bulletsToChecklist(out) : out, by: 'model' };
   }
   return { text: notes.tidyPlain(text), by: 'rules' };
 }

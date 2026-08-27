@@ -9,7 +9,7 @@ import { Trace } from '../../icons/Icon';
 import { engram, useLiveQuery } from '../../lib/hub';
 import { useToast } from '../../lib/toast';
 import { useTheme } from '../../theme/useTheme';
-import { Button, Hairline, HelpTip, Sheet, Text } from '../../ui';
+import { Button, Fade, Hairline, HelpTip, Sheet, Text } from '../../ui';
 import { textDefaults } from '../../ui/Text';
 import { shortDate, traceLine } from './format';
 import { openOriginal } from './content';
@@ -179,7 +179,10 @@ export function MetaBar({ item, onDismiss }: { item: Item; onDismiss: () => void
 
   return (
     <>
-      <View style={{ position: 'absolute', left: space[4], right: space[4], bottom: insets.bottom + space[3], flexDirection: 'row', alignItems: 'center', gap: space[2] }}>
+      {/* The bar sits on a band that fades the canvas over the content below it, as the library's search bar does. */}
+      <View pointerEvents="box-none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, paddingTop: 28, paddingHorizontal: space[4], paddingBottom: insets.bottom + space[3] }}>
+        <Fade color={c.bg} solidAt={0.55} />
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[2] }}>
         {item.url ? <Button title="Open" height={44} onPress={() => openOriginal(item.url)} style={{ flex: 1 }} /> : null}
         {iconBtn('Copy', copy)}
         {iconBtn('Share', share)}
@@ -187,6 +190,7 @@ export function MetaBar({ item, onDismiss }: { item: Item; onDismiss: () => void
           {item.url ? null : <Text size="xs" mono color="text2" numberOfLines={1} style={{ flexShrink: 1 }}>{line}</Text>}
           <Chevron color={c.text2} />
         </Pressable>
+      </View>
       </View>
 
       <Sheet open={open} onClose={() => setOpen(false)}>

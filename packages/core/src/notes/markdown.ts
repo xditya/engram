@@ -95,9 +95,15 @@ export function tidyPlain(text: string): string {
 
 export const TIDY_SYSTEM = [
   'You reformat a personal note as Markdown. Keep every word of content; do not add, remove, reorder or correct anything.',
-  'Use: a # title only if the first line is clearly one; ## for section labels; "- [ ] " checkboxes for things to buy, do or pack; "- " bullets otherwise; numbered lists only where order matters.',
+  'Use: a # title only if the first line is clearly one; ## for section labels; numbered lists only where order matters.',
+  'Lists of items are checklists: groceries, shopping, packing, ingredients, tasks, errands, things to watch or read, anything a person ticks off. Write those as "- [ ] item". Use plain "- " bullets only for ideas, facts or notes that are not done or bought.',
   'Return the Markdown only, no code fence, no commentary.',
 ].join('\n');
+
+// Plain "- " bullets become "- [ ] " when the note is a list of things (the model hedged on a shopping list).
+export function bulletsToChecklist(md: string): string {
+  return md.replace(/^(\s*)[-*]\s+(?!\[[ xX]\]\s)(.+)$/gm, '$1- [ ] $2');
+}
 
 // Grid cards and search snippets: the text without markers, checkboxes as glyphs.
 export function markdownToPlain(text: string): string {

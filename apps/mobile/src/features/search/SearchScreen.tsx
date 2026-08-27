@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { textDefaults } from '../../ui/Text';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Platform as RN, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ai, search as core } from '@engram/core';
 import { engram, useEngram, useToast } from '../../lib/engram';
@@ -10,7 +10,7 @@ import { useRecent } from './recent';
 import { ItemGrid, toEntry } from '../spaces/ItemGrid';
 import { useSearch } from './useSearch';
 import { AskCard } from './AskCard';
-import { askProvider, useAsk, useRetrieve } from './useAsk';
+import { askProvider, useAsk, useAskStore, useRetrieve } from './useAsk';
 
 const OPERATORS = ['type:', 'tag:', 'site:', 'text:', 'before:', 'after:', 'color:', 'is:pinned', 'in:', '-exclude', '"exact"'];
 // Fixed value sets; tags and sites come from core suggest.
@@ -34,7 +34,12 @@ export function SearchScreen() {
   // Opened with ?q=tag:x (tapping a tag on a card) the query starts as a chip; plain words start in the field.
   const { q } = useLocalSearchParams<{ q?: string }>();
   const [chips, setChips] = useState<string[]>(() => (q && core.tokenize(q).every((t) => t.kind === 'op') ? core.tokenize(q).map((t) => t.raw) : [])); // committed tokens, rendered inside the field
-  const [text, setText] = useState(() => (q && !core.tokenize(q).every((t) => t.kind === 'op') ? q : ''));
+  // Reopening search with an answer on the go brings the question back with it (the conversation lives in useAskStore).
+  const [text, setText] = useState(() => {
+    if (q) return core.tokenize(q).every((t) => t.kind === 'op') ? '' : q;
+    const s = useAskStore.getState().state;
+    return s.status === 'idle' ? '' : s.question;
+  });
   const query = [...chips, text].join(' ').trim();
   // A question ("which reel talks about claude code?") is searched by its keywords: FTS wants every word, and
   // "which" or "talks" would otherwise empty the results under the answer.
@@ -72,7 +77,8 @@ export function SearchScreen() {
   };
 
   return (
-    <Screen>
+    // iOS presents search as a page sheet that already sits below the status bar; only Android needs the inset.
+    <Screen style={RN.OS === 'ios' ? { paddingTop: space[2] } : undefined}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[3], marginHorizontal: space[4], marginTop: 18, marginBottom: 22 }}>
       <View style={{ flex: 1, minHeight: 48, paddingHorizontal: 14, paddingVertical: 6, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, backgroundColor: c.surface, borderRadius: 12, borderWidth: 1.5, borderColor: c.accent }}>
         {chips.map((ch, i) => {

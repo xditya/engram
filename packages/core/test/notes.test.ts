@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseMarkdown, parseInline, looksLikeMarkdown, looksTidyable, tidyPlain, markdownToPlain, toggleTodoLine } from '../src/notes/markdown';
+import { parseMarkdown, parseInline, looksLikeMarkdown, looksTidyable, tidyPlain, markdownToPlain, toggleTodoLine, bulletsToChecklist } from '../src/notes/markdown';
 
 describe('parseMarkdown', () => {
   it('splits headings, lists, todos, quotes, rules and paragraphs', () => {
@@ -40,6 +40,12 @@ describe('tidyPlain', () => {
   });
   it('turns "label:" lines into sections', () => {
     expect(tidyPlain('fruit:\napples\nveg:\nkale')).toBe('## fruit\n- [ ] apples\n\n## veg\n- [ ] kale');
+  });
+});
+
+describe('bulletsToChecklist', () => {
+  it('turns plain bullets into checkboxes and leaves existing ones alone', () => {
+    expect(bulletsToChecklist('# Shop\n- milk\n  - oat\n- [x] eggs\n* bread\nnot a bullet')).toBe('# Shop\n- [ ] milk\n  - [ ] oat\n- [x] eggs\n- [ ] bread\nnot a bullet');
   });
 });
 

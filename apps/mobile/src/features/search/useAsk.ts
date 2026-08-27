@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { create } from 'zustand';
 import { ai, search as core, type Item } from '@engram/core';
 import { engram, getSettings } from '../../lib/engram';
 
@@ -56,34 +57,44 @@ export function useRetrieve(query: string, enabled: boolean): { hits: Item[]; ms
   return state;
 }
 
-// One conversation per search screen: turns live in memory for as long as the screen does.
-export function useAsk() {
-  const [state, setState] = useState<AskState>(IDLE);
-  const turns = useRef<ai.AskTurn[]>([]);
-  const gen = useRef(0);
+// One conversation per app session, kept outside the screen: closing the search sheet and opening it again
+// brings the same answer and follow-ups back. A new question replaces it; `reset` clears it.
+type AskStore = { state: AskState; turns: ai.AskTurn[]; gen: number; ask(question: string): Promise<void>; reset(): void };
 
-  const ask = useCallback(async (question: string) => {
+export const useAskStore = create<AskStore>((set, get) => ({
+  state: IDLE,
+  turns: [],
+  gen: 0,
+  async ask(question) {
     const q = question.trim();
     const p = askProvider();
     if (!q || !p) return;
-    const my = ++gen.current;
-    setState({ ...IDLE, status: 'thinking', question: q });
+    const my = get().gen + 1;
+    set({ gen: my, state: { ...IDLE, status: 'thinking', question: q } });
     const e = engram();
     try {
       if (p.onDevice && !e.platform.onDevice?.loaded && !(await e.platform.onDevice!.ready())) throw new Error('the on-device model is not ready');
       const r = await ai.ask(
         { db: e.platform.db, provider: p.provider, embedQuery: embedQuery(), tagsOf: (id) => e.db.tags.of(id), now: e.platform.now() },
-        q, turns.current,
+        q, get().turns,
       );
-      if (my !== gen.current) return;
-      turns.current = [...turns.current, { role: 'user' as const, content: q }, { role: 'assistant' as const, content: r.answer }].slice(-6);
-      setState({ status: 'done', question: q, answer: r.answer, cards: r.cards, cited: r.cited, empty: r.empty });
+      if (my !== get().gen) return;
+      set({
+        turns: [...get().turns, { role: 'user' as const, content: q }, { role: 'assistant' as const, content: r.answer }].slice(-6),
+        state: { status: 'done', question: q, answer: r.answer, cards: r.cards, cited: r.cited, empty: r.empty },
+      });
     } catch (err) {
-      if (my !== gen.current) return;
-      setState({ ...IDLE, status: 'error', question: q, error: (err as Error).message });
+      if (my !== get().gen) return;
+      set({ state: { ...IDLE, status: 'error', question: q, error: (err as Error).message } });
     }
-  }, []);
+  },
+  reset: () => set((s) => ({ gen: s.gen + 1, turns: [], state: IDLE })),
+}));
 
-  const reset = useCallback(() => { gen.current++; turns.current = []; setState(IDLE); }, []);
-  return { state, ask, reset, followUps: turns.current.length > 0 };
+export function useAsk() {
+  const state = useAskStore((s) => s.state);
+  const ask = useAskStore((s) => s.ask);
+  const reset = useAskStore((s) => s.reset);
+  const followUps = useAskStore((s) => s.turns.length > 0);
+  return { state, ask, reset, followUps };
 }

@@ -8,6 +8,15 @@ import { useTheme } from '../../theme/useTheme';
 import { Fade, Text } from '../../ui';
 import { duration, parseMeta } from './format';
 import type { Entry } from './useLibrary';
+import { useShareLog } from '../../lib/shareLog';
+
+// A preview that exists on disk but will not draw is invisible in the grid; the share log makes it reportable.
+const failed = new Set<string>();
+const imageFailed = (uri: string, error: string) => {
+  if (failed.has(uri)) return;
+  failed.add(uri);
+  useShareLog.getState().add('error', `image failed: ${error} · ${uri.slice(-60)}`);
+};
 
 export interface CardProps {
   entry: Entry;
@@ -30,12 +39,12 @@ export function Card({ entry, width, selecting, selected, showTrace, fresh, onPr
   const bottom = showTrace && !media ? pad + 14 : pad; // text cards leave room for the trace at left 12 / bottom 10
 
   const img = uri
-    ? <Image source={{ uri }} style={{ width, height: Math.round(width * ratio), backgroundColor: c.surface2 }} contentFit="cover" accessibilityIgnoresInvertColors />
+    ? <Image source={{ uri }} onError={(e) => imageFailed(uri, e.error)} style={{ width, height: Math.round(width * ratio), backgroundColor: c.surface2 }} contentFit="cover" accessibilityIgnoresInvertColors />
     : null;
   const block = (h: number) => <View style={{ width, height: Math.round(width * h), backgroundColor: c.surface2 }} />;
   // Article thumb: inset 12 px inside the card, 84 px high, radius 6.
   const inset = uri
-    ? <Image source={{ uri }} style={{ width: width - pad * 2, height: 84, borderRadius: radius.sm, backgroundColor: c.surface2, marginBottom: 4 }} contentFit="cover" accessibilityIgnoresInvertColors />
+    ? <Image source={{ uri }} onError={(e) => imageFailed(uri, e.error)} style={{ width: width - pad * 2, height: 84, borderRadius: radius.sm, backgroundColor: c.surface2, marginBottom: 4 }} contentFit="cover" accessibilityIgnoresInvertColors />
     : null;
   const domain = item.domain ? <Text size="xs" mono color="text3" numberOfLines={1}>{item.domain}</Text> : null;
   const title = (t: string) => <Text size="md" weight={500} numberOfLines={2}>{t}</Text>;
