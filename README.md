@@ -17,6 +17,11 @@ It is a free, open source answer to apps like mymind, with two differences that 
   <img src="docs/screenshots/share-overlay.png" width="19%" alt="Share overlay over Chrome">
   <img src="docs/screenshots/settings.png" width="19%" alt="Settings">
 </p>
+<p align="center">
+  <img src="docs/screenshots/ask.png" width="19%" alt="Ask your library: an answer with a citation">
+  <img src="docs/screenshots/note.png" width="19%" alt="A markdown note as a checklist">
+  <img src="docs/screenshots/card-actions.png" width="19%" alt="Card with Open, Copy and Share">
+</p>
 
 ## What it does
 

@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>engram — Export format</title>
+  <meta name="description" content="What is inside an engram export: engram.json, cards.csv, markdown notes and your original files. Documented so you can leave without engram.">
+  <meta name="theme-color" content="#f4f5f7">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <nav class="nav wrap">
+    <a href="index.html" class="brand" aria-label="engram">
+      <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3.9 15L4.5 14.8L5.2 14.6L5.7 14.4L6.3 14.1L6.8 13.7L7.3 13.3L7.8 12.9L8.3 12.4L8.7 11.8L9.2 11.2L9.7 10.6L10.2 10L10.7 9.3L11.2 8.5L11.8 7.8L12.3 7L12.9 6.2L13.6 5.4L14.2 4.5L15 3.7A1.6 1.6 0 0 1 17.2 5.9L16.5 6.6L15.7 7.3L15 8L14.3 8.7L13.6 9.4L13 10L12.3 10.7L11.7 11.3L11.1 11.9L10.5 12.4L9.9 13L9.2 13.5L8.6 13.9L8 14.3L7.3 14.6L6.7 14.9L6 15.2L5.3 15.3L4.6 15.4L3.9 15.4A0.3 0.3 0 0 1 3.9 15Z" fill="currentColor"/></svg>
+      <span>engram</span>
+    </a>
+    <div class="nav-links">
+      <a href="https://github.com/xditya/engram">source</a>
+      <a href="releases.html">releases</a>
+    </div>
+  </nav>
+
+  <main class="rel wrap">
+    <header class="rel-head">
+      <p class="eyebrow">leave whenever you like</p>
+      <h1>Export format</h1>
+      <p class="lede">Settings → Export writes one zip. Everything in it is plain: JSON, CSV, markdown and your original files. Nothing needs engram to open, and this page is the contract: a test in the repo fails if the layout changes.</p>
+    </header>
+
+    <section class="rel-how" style="display:block">
+      <div class="tree" style="margin-top:0">
+        <div>engram-export-2026-08-27.zip</div>
+        <div>├─ engram.json <span class="dim">&nbsp;everything, for importing back into engram</span></div>
+        <div>├─ cards.csv <span class="dim">&nbsp;one row per card, opens in any spreadsheet</span></div>
+        <div>├─ notes/ <span class="dim">&nbsp;one markdown file per card, Obsidian-ready</span></div>
+        <div>│&nbsp;&nbsp; └─ sourdough-bread-01a0343f.md</div>
+        <div>└─ files/ <span class="dim">&nbsp;your originals, named by content hash</span></div>
+        <div>&nbsp;&nbsp;&nbsp; └─ 9f2c…e1a4.jpg</div>
+      </div>
+    </section>
+
+    <section class="rel-history">
+      <h2>engram.json</h2>
+      <p class="rel-empty" style="margin-top:12px">The full library, column for column, in one object. Importing it into another engram restores cards, tags, Spaces and file references (files come from <code>files/</code>).</p>
+      <div class="tree">
+        <div>{</div>
+        <div>&nbsp; "engram": 1, <span class="dim">format version</span></div>
+        <div>&nbsp; "exportedAt": 1787000000000, <span class="dim">ms since epoch</span></div>
+        <div>&nbsp; "items": [ { id, type, url, domain, title, body, summary, ocr_text, meta, colors,</div>
+        <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; embedding, embedding_dim, embedding_model, pinned_at, opened_at, open_count,</div>
+        <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; resurfaced_at, let_go_at, deleted_at, created_at, updated_at, created_by } ],</div>
+        <div>&nbsp; "tags": [ { item_id, tag, source, deleted_at } ], <span class="dim">source: user | ai | import</span></div>
+        <div>&nbsp; "spaces": [ { id, name, query, sort, deleted_at } ],</div>
+        <div>&nbsp; "spaceItems": [ { space_id, item_id, added_at, deleted_at } ],</div>
+        <div>&nbsp; "files": [ { hash, item_id, role, mime, bytes, w, h, blurhash, deleted_at } ] <span class="dim">role: original | thumb | poster | reader_html</span></div>
+        <div>}</div>
+      </div>
+      <p class="rel-empty" style="margin-top:12px"><code>type</code> is one of note, link, article, image, video, pdf, quote, product, book, recipe, tweet, repo, file. <code>meta</code> is a JSON string of per-type extras (price, author, duration, shortcode…). <code>embedding</code> is base64 of little-endian float32; everything else is a plain value or <code>null</code>. Times are milliseconds since the epoch. Cards you let go keep a <code>deleted_at</code> and are still in the file.</p>
+    </section>
+
+    <section class="rel-history">
+      <h2>cards.csv</h2>
+      <p class="rel-empty" style="margin-top:12px">UTF-8, comma separated, quoted where needed, one header row. Cards you let go are left out.</p>
+      <div class="tree">
+        <div>id, type, title, url, domain, body, summary, tags, ai_tags, created, updated</div>
+      </div>
+      <p class="rel-empty" style="margin-top:12px"><code>tags</code> holds tags you added or imported, <code>ai_tags</code> the ones engram added, both comma separated inside the cell. <code>created</code> and <code>updated</code> are ISO 8601.</p>
+    </section>
+
+    <section class="rel-history">
+      <h2>notes/*.md</h2>
+      <p class="rel-empty" style="margin-top:12px">One file per card, named <code>&lt;title-slug&gt;-&lt;first 8 of id&gt;.md</code>. YAML front matter, then the card's text as the body. Drop the folder into an Obsidian vault and tags become Obsidian tags.</p>
+      <div class="tree">
+        <div>---</div>
+        <div>id: 01a0343f-…</div>
+        <div>type: article</div>
+        <div>created: 2026-08-25T10:12:03.000Z</div>
+        <div>title: "Sourdough bread"</div>
+        <div>url: "https://kingarthur.com/…"</div>
+        <div>summary: "…"</div>
+        <div>tags: ["baking", "food"]</div>
+        <div>---</div>
+        <div>Flour, water, salt…</div>
+      </div>
+    </section>
+
+    <section class="rel-history">
+      <h2>files/</h2>
+      <p class="rel-empty" style="margin-top:12px">Your originals (photos, PDFs, videos), the thumbnails engram made, and saved reader copies of articles (<code>.html</code>). Each is named by the BLAKE3 hash of its bytes plus an extension from its type, and <code>files</code> in <code>engram.json</code> maps every hash to its card and role.</p>
+    </section>
+
+    <section class="rel-history">
+      <h2>Coming back</h2>
+      <p class="rel-empty" style="margin-top:12px">Settings → Import accepts the whole zip and restores everything, including which Space each card sat on. It also reads a mymind export, Raindrop and Pocket CSVs, browser bookmark HTML, and a folder of markdown files.</p>
+    </section>
+  </main>
+
+  <footer class="footer wrap">
+    <div class="footer-by">
+      <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3.9 15L4.5 14.8L5.2 14.6L5.7 14.4L6.3 14.1L6.8 13.7L7.3 13.3L7.8 12.9L8.3 12.4L8.7 11.8L9.2 11.2L9.7 10.6L10.2 10L10.7 9.3L11.2 8.5L11.8 7.8L12.3 7L12.9 6.2L13.6 5.4L14.2 4.5L15 3.7A1.6 1.6 0 0 1 17.2 5.9L16.5 6.6L15.7 7.3L15 8L14.3 8.7L13.6 9.4L13 10L12.3 10.7L11.7 11.3L11.1 11.9L10.5 12.4L9.9 13L9.2 13.5L8.6 13.9L8 14.3L7.3 14.6L6.7 14.9L6 15.2L5.3 15.3L4.6 15.4L3.9 15.4A0.3 0.3 0 0 1 3.9 15Z" fill="currentColor"/></svg>
+      <span>made by <a href="https://xditya.me">Aditya S</a> &nbsp;·&nbsp; AGPL-3.0</span>
+    </div>
+    <div class="footer-links">
+      <a href="https://github.com/xditya/engram">github</a>
+      <a href="https://buymeacoffee.com/xditya">buy me a coffee</a>
+    </div>
+  </footer>
+
+</body>
+</html>
