@@ -78,6 +78,16 @@ jobs:
           key: ${{ runner.os }}-pods-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: ${{ runner.os }}-pods-
 
+      - name: Stamp release tag into the app
+        run: |
+          TAG="${{ inputs.tag != '' && inputs.tag || format('build-{0}', github.run_number) }}"
+          cat > ${{ env.APP_DIR }}/src/lib/release.ts <<EOF
+          // Stamped by the Build App workflow.
+          export const RELEASE_TAG = '$TAG';
+          export const RELEASE_COMMIT = '${{ github.sha }}';
+          EOF
+          cat ${{ env.APP_DIR }}/src/lib/release.ts
+
       - name: Generate iOS project (Expo Prebuild)
         working-directory: ${{ env.APP_DIR }}
         run: npx expo prebuild --platform ios --clean
@@ -234,6 +244,16 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Stamp release tag into the app
+        run: |
+          TAG="${{ inputs.tag != '' && inputs.tag || format('build-{0}', github.run_number) }}"
+          cat > ${{ env.APP_DIR }}/src/lib/release.ts <<EOF
+          // Stamped by the Build App workflow.
+          export const RELEASE_TAG = '$TAG';
+          export const RELEASE_COMMIT = '${{ github.sha }}';
+          EOF
+          cat ${{ env.APP_DIR }}/src/lib/release.ts
+
       - name: Generate Android project (Expo Prebuild)
         # Config plugins run here: the translucent ShareActivity, the OCR and
         # screenshot-watcher modules, op-sqlite with FTS5.
@@ -287,6 +307,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
@@ -304,21 +334,23 @@ jobs:
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
       - name: Write release notes
+        env:
+          TAG: ${{ steps.meta.outputs.tag }}
         run: |
-          cat > notes.md <<'NOTES'
-          Automated build.
+          set -euo pipefail
+          # Everything since the previous release, grouped from the conventional commit messages.
+          node scripts/changelog.mjs "$TAG" > notes.md
+          cat >> notes.md <<'NOTES'
 
-          - **Android** `.apk` is signed with the Expo debug keystore. Fine for
-            sideloading, not accepted by the Play Store.
-          - **iOS** `.ipa` is **unsigned**. Install it with a tool that re-signs on
-            install (AltStore, Sideloadly), or resign it yourself. It will not
-            install by double-clicking.
+          ### Install
+          - **Android:** download the `.apk` and open it. Signed with the debug keystore: fine for sideloading, not for the Play Store.
+          - **iPhone:** the `.ipa` is unsigned. Install it with AltStore, SideStore or Sideloadly, which sign it with your Apple ID.
 
-          These are plain release builds: they carry their own JavaScript bundle
-          and do not need a Metro server.
+          Builds carry their own JavaScript bundle and need no Metro server.
           NOTES
           echo "" >> notes.md
           echo "Built from commit ${{ github.sha }}." >> notes.md
+          echo "---- notes.md ----"; cat notes.md
 
       - name: Publish GitHub Release
         env:
