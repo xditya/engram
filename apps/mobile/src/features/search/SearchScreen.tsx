@@ -2,13 +2,15 @@ import { useMemo, useState } from 'react';
 import { textDefaults } from '../../ui/Text';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { search as core } from '@engram/core';
+import { ai, search as core } from '@engram/core';
 import { engram, useEngram, useToast } from '../../lib/engram';
 import { useTheme } from '../../theme/useTheme';
 import { Hairline, Screen, Text } from '../../ui';
 import { useRecent } from './recent';
 import { ItemGrid, toEntry } from '../spaces/ItemGrid';
 import { useSearch } from './useSearch';
+import { AskCard } from './AskCard';
+import { askProvider, useAsk, useRetrieve } from './useAsk';
 
 const OPERATORS = ['type:', 'tag:', 'site:', 'text:', 'before:', 'after:', 'color:', 'is:pinned', 'in:', '-exclude', '"exact"'];
 // Fixed value sets; tags and sites come from core suggest.
@@ -34,7 +36,20 @@ export function SearchScreen() {
   const [chips, setChips] = useState<string[]>(() => (q && core.tokenize(q).every((t) => t.kind === 'op') ? core.tokenize(q).map((t) => t.raw) : [])); // committed tokens, rendered inside the field
   const [text, setText] = useState(() => (q && !core.tokenize(q).every((t) => t.kind === 'op') ? q : ''));
   const query = [...chips, text].join(' ').trim();
-  const { hits, ms } = useSearch(query);
+  // A question ("which reel talks about claude code?") is searched by its keywords: FTS wants every word, and
+  // "which" or "talks" would otherwise empty the results under the answer.
+  const question = ai.looksLikeQuestion(query);
+  const plain = useSearch(question ? '' : query);
+  const retrieved = useRetrieve(query, question);
+  const { hits, ms } = question ? retrieved : plain;
+  // Ask mode: a question-shaped query offers an answer from the model over the matching cards, above the results.
+  const asking = useAsk();
+  const provider = e ? askProvider() : null; // cheap; recomputed as the on-device model loads or settings change
+  const canAsk = !!provider && question;
+  const askNow = () => { if (!provider) return; recent.add(query); void asking.ask(query); };
+  const askHeader = asking.state.status !== 'idle' && provider
+    ? <AskCard state={asking.state} providerName={provider.name} onDevice={provider.onDevice} onAsk={(q) => void asking.ask(q)} onOpen={() => recent.add(asking.state.question)} />
+    : undefined;
 
   // A finished operator (`type:pdf `) becomes a chip as soon as the space after it is typed.
   const onChange = (t: string) => {
@@ -74,7 +89,7 @@ export function SearchScreen() {
           autoFocus
           value={text}
           onChangeText={onChange}
-          onSubmitEditing={commit}
+          onSubmitEditing={() => { if (canAsk) askNow(); else commit(); }}
           onKeyPress={(ev) => { if (ev.nativeEvent.key === 'Backspace' && !text) setChips((cs) => cs.slice(0, -1)); }}
           placeholderTextColor={c.text3}
           cursorColor={c.accent}
@@ -94,18 +109,28 @@ export function SearchScreen() {
       <Pressable accessibilityRole="button" onPress={() => router.back()} hitSlop={12}><Text size="sm" color="text2">Cancel</Text></Pressable>
       </View>
 
-      {suggestions.length ? (
+      {canAsk && asking.state.status === 'idle' ? (
+        <View style={{ flexDirection: 'row', paddingHorizontal: space[4], paddingBottom: space[3] }}>
+          <Pressable accessibilityRole="button" accessibilityHint={`Answers from your cards using ${provider!.name}`} onPress={askNow}
+            style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 36, paddingHorizontal: 12, borderRadius: 18, backgroundColor: pressed ? c.accent : c.accentSoft })}>
+            <Text size="sm" weight={500} color="accent">Ask your library</Text>
+            <Text size="xs" mono color="accent">↵</Text>
+          </Pressable>
+        </View>
+      ) : suggestions.length ? (
         <ScrollView horizontal keyboardShouldPersistTaps="always" showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ paddingHorizontal: space[4], gap: space[2], paddingBottom: space[3], alignItems: 'flex-start' }}>
           {suggestions.map((s) => <OpChip key={s} label={s} onPress={() => onChange(s.endsWith(':') ? s : `${s} `)} />)}
         </ScrollView>
       ) : null}
 
-      {query ? (
+      {query || askHeader ? (
         <>
-          <Text size="xs" mono color="text3" style={{ paddingHorizontal: space[4], paddingBottom: space[2] }}>
-            {hits.length ? `${hits.length} results · ${(ms / 1000).toFixed(2)} s` : `No results for "${query}"`}
-          </Text>
-          <ItemGrid entries={hits.map(toEntry)} onOpen={() => recent.add(query)} />
+          {query ? (
+            <Text size="xs" mono color="text3" style={{ paddingHorizontal: space[4], paddingBottom: space[2] }}>
+              {hits.length ? `${hits.length} results · ${(ms / 1000).toFixed(2)} s` : `No results for "${query}"`}
+            </Text>
+          ) : null}
+          <ItemGrid entries={hits.map(toEntry)} header={askHeader} onOpen={() => recent.add(query)} />
         </>
       ) : (
         <ScrollView keyboardShouldPersistTaps="always" contentContainerStyle={{ paddingHorizontal: space[4], gap: 10 }}>
