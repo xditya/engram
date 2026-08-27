@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { memoryDb } from './helpers/db';
 import type { Database } from '../src/platform';
 import type { Provider } from '../src/ai/types';
-import { ask, retrievalQuery, looksLikeQuestion, citations, contextBlock, NOTHING_FOUND } from '../src/ai/ask';
+import { ask, retrievalQuery, looksLikeQuestion, citations, contextBlock, unhedge, NOTHING_FOUND } from '../src/ai/ask';
 
 const NOW = new Date(2026, 4, 25, 12).getTime();
 
@@ -89,6 +89,14 @@ describe('ask', () => {
     await ask({ db, provider: fakeProvider('ok', seen), tagsOf: tagsOf(db), now: NOW }, 'and which fonts were listed?', [{ role: 'user', content: 'what about fonts' }, { role: 'assistant', content: 'You saved a fonts list [1].' }]);
     expect(seen.user).toContain('Earlier in this conversation');
     expect(seen.user).toContain('User: what about fonts');
+  });
+});
+
+describe('unhedge', () => {
+  it('drops the not-found hedge when cards are cited, keeps a real not-found', () => {
+    expect(unhedge("I couldn't find anything saved about that. The closest cards are [2] Lokesh Kanagaraj - Wikipedia.")).toBe('[2] Lokesh Kanagaraj - Wikipedia.');
+    expect(unhedge("I couldn't find anything saved about that.")).toBe("I couldn't find anything saved about that.");
+    expect(unhedge('One reel says so [1].')).toBe('One reel says so [1].');
   });
 });
 

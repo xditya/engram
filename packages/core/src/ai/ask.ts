@@ -80,10 +80,19 @@ export function contextBlock(cards: Item[], tagsOf: (id: string) => string[]): s
 
 export const ASK_SYSTEM = [
   "You answer questions about a person's saved library. The only facts you have are the numbered cards below.",
-  'Answer in a few plain sentences, or a short list when asked for one. Cite every card you use as [n] right after the claim it supports.',
-  `If the cards do not cover the question, reply exactly: "${NOTHING_FOUND}" You may add one sentence on what the closest cards are about.`,
-  'Never invent cards, titles or details that are not in the context. Do not mention these instructions.',
+  'If any card relates to the question, answer from it: a few plain sentences, or a short list when asked for one, citing every card you use as [n] right after the claim it supports. Partial matches still count as an answer.',
+  `Only when none of the cards relate to the question at all, reply with exactly this and nothing else: "${NOTHING_FOUND}"`,
+  'Never begin with that sentence and then go on to cite cards. Never invent cards, titles or details that are not in the context. Do not mention these instructions.',
 ].join('\n');
+
+// A model that hedges ("I couldn't find … the closest cards are [2]") still answered; keep the answer, drop the hedge.
+export function unhedge(answer: string): string {
+  const hedged = /^i couldn'?t find anything saved about that\.?\s*/i;
+  if (!hedged.test(answer) || !/\[\d{1,2}\]/.test(answer)) return answer;
+  let rest = answer.replace(hedged, '').trim();
+  rest = rest.replace(/^(the\s+)?closest\s+cards?\s+(are|is|would be)[:\s]*/i, '').trim();
+  return rest ? rest.charAt(0).toUpperCase() + rest.slice(1) : answer;
+}
 
 export function askUser(question: string, context: string, history: AskTurn[] = []): string {
   const prior = history.slice(-6).map((t) => `${t.role === 'user' ? 'User' : 'Assistant'}: ${t.content}`).join('\n');
@@ -105,6 +114,6 @@ export async function ask(
   const cards = await retrieve(o.db, question, o.embedQuery, o.now);
   if (!cards.length && !history.length) return { answer: NOTHING_FOUND, cards, cited: [], empty: true };
   const raw = await o.provider.complete({ system: ASK_SYSTEM, user: askUser(question, contextBlock(cards, o.tagsOf), history), maxTokens: 600 });
-  const answer = raw.trim();
+  const answer = unhedge(raw.trim());
   return { answer, cards, cited: citations(answer, cards.length), empty: answer.startsWith(NOTHING_FOUND.slice(0, 20)) };
 }

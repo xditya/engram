@@ -106,9 +106,15 @@ export function SearchScreen() {
           style={{ flex: 1, minWidth: 80, height: 34, paddingVertical: 0, margin: 0, textAlignVertical: 'center', includeFontPadding: false, fontFamily: 'GeistMono', fontSize: 14, lineHeight: 18, color: c.text }}
         />
         {query ? (
-          <Pressable accessibilityRole="button" onPress={saveSpace} hitSlop={12} style={{ height: 34, justifyContent: 'center', alignSelf: 'center' }}>
-            <Text size="xs" weight={500} color="accent">Save as Space</Text>
-          </Pressable>
+          <>
+            <Pressable accessibilityRole="button" onPress={saveSpace} hitSlop={12} style={{ height: 34, justifyContent: 'center', alignSelf: 'center' }}>
+              <Text size="xs" weight={500} color="accent">Save as Space</Text>
+            </Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="Clear search" onPress={() => { setChips([]); setText(''); asking.reset(); }} hitSlop={10}
+              style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: c.surface2, alignItems: 'center', justifyContent: 'center', alignSelf: 'center' }}>
+              <Text size="xs" weight={600} color="text2" style={{ lineHeight: 14 }}>✕</Text>
+            </Pressable>
+          </>
         ) : null}
       </View>
       <Pressable accessibilityRole="button" onPress={() => router.back()} hitSlop={12}><Text size="sm" color="text2">Cancel</Text></Pressable>

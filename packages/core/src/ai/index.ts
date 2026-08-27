@@ -13,5 +13,5 @@ export type { DescribeImagePatch } from './jobs/describeImage';
 export { PRICE, estimateTokens, estimateCost, isFree } from './cost';
 export { createQueue } from './queue';
 export type { Queue, QueueOptions, QueueWriter } from './queue';
-export { ask, retrieve, retrievalQuery, looksLikeQuestion, contextBlock, citations, ASK_SYSTEM, NOTHING_FOUND } from './ask';
+export { ask, retrieve, retrievalQuery, looksLikeQuestion, contextBlock, citations, unhedge, ASK_SYSTEM, NOTHING_FOUND } from './ask';
 export type { AskTurn, AskResult } from './ask';

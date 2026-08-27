@@ -167,6 +167,20 @@ export function MetaBar({ item, onDismiss }: { item: Item; onDismiss: () => void
   // its own gesture target: a swipe down closes it, and the card's own swipe-to-dismiss is off while it is open.
   const nav = useNavigation();
   useEffect(() => { nav.setOptions({ gestureEnabled: !open }); return () => nav.setOptions({ gestureEnabled: true }); }, [nav, open]);
+  // Throws the fetched preview away and runs extract again (which queues the thumbnail and OCR after it). For the
+  // case where a page changed, or a preview never drew; the card's own text and tags are left alone.
+  const reloadPreview = () => {
+    const e = engram();
+    const previews = e.db.files.of(item.id).filter((f) => f.role === 'thumb' || f.role === 'poster');
+    e.db.transaction(() => { for (const f of previews) e.db.files.remove(f.hash); });
+    for (const f of previews) void e.platform.files.remove(f.hash).catch(() => {});
+    e.platform.db.exec("DELETE FROM jobs WHERE item_id = ? AND kind IN ('extract','thumb','ocr','colors')", [item.id]);
+    e.queue.enqueueFor(item.id, ['extract']);
+    void e.drain();
+    e.events.emit();
+    setOpen(false);
+    show('Fetching the preview again…');
+  };
   const copy = () => void copyItem(item).then((what) => show(what ? `${what} copied` : 'Nothing to copy')).catch((e: Error) => show(e.message));
   const share = () => void shareItem(item).catch((e: Error) => { if (!/cancel|dismiss/i.test(e.message)) show(e.message); });
   const pan = Gesture.Pan().activeOffsetY(12).onEnd((e) => { if (e.translationY > 60 || e.velocityY > 800) runOnJS(setOpen)(false); });
@@ -227,6 +241,13 @@ export function MetaBar({ item, onDismiss }: { item: Item; onDismiss: () => void
                 <>
                   <RowLine onPress={() => openOriginal(item.url)} label="Open original">
                     <Text size="xs" mono color="accent" numberOfLines={2}>{item.url.replace(/^https?:\/\/(www\.)?/, '')}</Text>
+                  </RowLine>
+                  <Hairline />
+                  <RowLine onPress={reloadPreview} label="Reload preview">
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                      <Text size="sm">Reload preview</Text>
+                      <Text size="xs" color="text3">fetches the page again</Text>
+                    </View>
                   </RowLine>
                   <Hairline />
                 </>
