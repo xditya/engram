@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Platform as RN, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { engram, useLiveQuery } from '../../lib/engram';
 import { useTheme } from '../../theme/useTheme';
@@ -33,9 +33,15 @@ export function CardDetail({ id, active, onDismiss }: { id: string; active: bool
     <Pressable accessibilityRole="button" accessibilityLabel="Show recognised text" accessibilityState={{ selected: showText }} onPress={() => setShowText((v) => !v)} hitSlop={8} style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: space[2] }}>
       <Text size="xs" weight={500} color={showText ? 'accent' : 'text2'}>Text</Text>
     </Pressable>
+  ) : item.url && item.type !== 'image' ? (
+    <Pressable accessibilityRole="button" onPress={() => openOriginal(item.url)} hitSlop={8} style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: space[2] }}>
+      <Text size="sm" weight={500} color="accent">Open</Text>
+    </Pressable>
   ) : null;
+  // iOS presents this as a page sheet that already sits below the status bar; only Android needs the inset.
+  const top = RN.OS === 'ios' ? space[1] : insets.top;
   return (
-    <View style={{ flex: 1, backgroundColor: c.bg, paddingTop: insets.top }}>
+    <View style={{ flex: 1, backgroundColor: c.bg, paddingTop: top }}>
       <View style={{ height: 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space[2] }}>
         <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={onDismiss} hitSlop={8} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
           <Text size="lg" color="text2">✕</Text>

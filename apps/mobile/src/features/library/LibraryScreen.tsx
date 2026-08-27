@@ -53,7 +53,8 @@ export function LibraryScreen() {
   const collapse = useSharedValue(0);
   const fold = (v: boolean) => { folded.current = v; collapse.value = withTiming(v ? 1 : 0, { duration: 240, easing: Easing.out(Easing.cubic) }); };
   const { width: winW } = useWindowDimensions();
-  const fab = Math.round(56 * uiScale);
+  const fab = Math.round(52 * uiScale); // search bar and + button share this height so they sit on one line
+  const plus = Math.round(20 * uiScale);
   const searchW = winW - space[4] * 2 - fab - space[3];
   const searchStyle = useAnimatedStyle(() => ({
     width: interpolate(collapse.value, [0, 1], [searchW, 0]),
@@ -211,11 +212,11 @@ export function LibraryScreen() {
             </View>
           ) : null}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: space[3] }}>
-            <Animated.View style={[{ height: 52, overflow: 'hidden' }, searchStyle]}>
+            <Animated.View style={[{ height: fab, overflow: 'hidden' }, searchStyle]}>
               <Pressable
                 accessibilityRole="search"
                 onPress={() => router.push('/search')}
-                style={{ width: searchW, height: Math.round(48 * uiScale), borderRadius: 12, backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, justifyContent: 'center', paddingHorizontal: space[4] }}
+                style={{ width: searchW, height: fab, borderRadius: radius.lg, backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, justifyContent: 'center', paddingHorizontal: space[4] }}
               >
                 <Text size="sm" color="text3">Search your library</Text>
               </Pressable>
@@ -226,8 +227,10 @@ export function LibraryScreen() {
               onPress={() => { if (folded.current) fold(false); else router.push('/capture'); }}
               style={({ pressed }) => ({ width: fab, height: fab, borderRadius: radius.lg, backgroundColor: c.accent, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.85 : 1 })}
             >
-              <Animated.View style={[{ position: 'absolute' }, plusStyle]}>
-                <Text style={{ fontSize: Math.round(26 * uiScale), lineHeight: Math.round(26 * uiScale), color: dark ? c.bg : c.surface }}>+</Text>
+              {/* The plus is two bars, not a glyph: font metrics put a "+" character off-centre on iOS. */}
+              <Animated.View style={[{ position: 'absolute', width: plus, height: plus, alignItems: 'center', justifyContent: 'center' }, plusStyle]}>
+                <View style={{ position: 'absolute', width: plus, height: 2.5, borderRadius: 2, backgroundColor: dark ? c.bg : c.surface }} />
+                <View style={{ position: 'absolute', width: 2.5, height: plus, borderRadius: 2, backgroundColor: dark ? c.bg : c.surface }} />
               </Animated.View>
               <Animated.View style={[{ position: 'absolute' }, markStyle]}>
                 <Trace size={28} color={dark ? c.bg : c.surface} />

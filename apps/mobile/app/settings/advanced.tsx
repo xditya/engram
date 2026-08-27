@@ -64,7 +64,7 @@ export default function Advanced() {
       </Group>
       <Group label="Library">
         <Row title="Re-tag library" subtitle="Runs Intelligence over every save again" onPress={retag} />
-        <Row title="Fetch missing previews" subtitle="Imported or restored cards that never got their image" onPress={() => { if (!engram) return; void repairPreviews(engram, { force: true }).then((r) => show(r.extract || r.blobs ? `Fetching ${n(r.extract)} previews · ${n(r.blobs)} images` : 'Every card has its preview')); }} />
+        <Row title="Fetch missing previews" subtitle="Imported or restored cards that never got their image" onPress={() => { if (!engram) return; void repairPreviews(engram, { force: true }).then((r) => show(r.extract || r.blobs || r.ocr ? `Fetching ${n(r.extract)} previews · ${n(r.blobs)} images · reading ${n(r.ocr)}` : 'Every card has its preview')); }} />
         <Row title="Rebuild thumbnails" subtitle="Photos and videos you added. Link previews are fetched above." onPress={rebuildThumbs} />
       </Group>
       <Group label="Diagnostics">

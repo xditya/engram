@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import Animated, { Easing, FadeIn, FadeOut, ReduceMotion, useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 import type { Item } from '@engram/core';
 import { Trace } from '../../icons/Icon';
 import { engram, useLiveQuery } from '../../lib/hub';
@@ -21,13 +22,13 @@ const EASE = Easing.bezier(0.33, 1, 0.68, 1);
 
 // Tags that land later (autotag / classify jobs) fade in like any new save: 200 ms, opacity + 4 pt lift,
 // staggered >= 120 ms apart when several arrive in one batch. Reduced motion keeps the fade, drops the lift.
-function TagChip({ label, onPress, dashed, accessibilityLabel, delay = 0 }: { label: string; onPress: () => void; dashed?: boolean; accessibilityLabel?: string; delay?: number }) {
+function TagChip({ label, onPress, onLongPress, dashed, accessibilityLabel, accessibilityHint, delay = 0 }: { label: string; onPress: () => void; onLongPress?: () => void; dashed?: boolean; accessibilityLabel?: string; accessibilityHint?: string; delay?: number }) {
   const { c, motion } = useTheme();
   const reduced = useReducedMotion();
   const entering = FadeIn.duration(motion.base).delay(delay).easing(EASE).reduceMotion(ReduceMotion.Never)
     .withInitialValues((reduced ? { opacity: 0 } : { opacity: 0, transform: [{ translateY: 4 }] }) as { opacity: number }); // the builder's type omits transform; the runtime merges any style
   return (
-    <APressable entering={entering} accessibilityRole="button" accessibilityLabel={accessibilityLabel} onPress={onPress} hitSlop={6}
+    <APressable entering={entering} accessibilityRole="button" accessibilityLabel={accessibilityLabel} accessibilityHint={accessibilityHint} onPress={onPress} onLongPress={onLongPress} hitSlop={6}
       style={{ paddingVertical: 4, paddingHorizontal: 9, borderRadius: 7, justifyContent: 'center', borderWidth: 1, borderColor: c.line, borderStyle: dashed ? 'dashed' : 'solid' }}>
       <Text size="xs">{label}</Text>
     </APressable>
@@ -45,12 +46,19 @@ export function Tags({ item, tags, pending, compact }: { item: Item; tags: strin
   const q = (draft ?? '').trim().toLowerCase();
   const hints = q ? all.filter((t) => t.toLowerCase().startsWith(q) && !tags.includes(t)).slice(0, 6) : [];
   const add = (t: string) => { const v = t.trim(); if (v) engram().db.tags.add(item.id, v); setDraft(null); };
+  // A tap never destroys: it searches the tag. Removing is a long press, and comes with Undo.
+  const show = useToast((s) => s.show);
+  const remove = (t: string) => {
+    engram().db.tags.remove(item.id, t);
+    show(`Removed "${t}"`, 5000, { label: 'Undo', onPress: () => engram().db.tags.add(item.id, t) });
+  };
+  const open = (t: string) => router.push({ pathname: '/search', params: { q: `tag:${t}` } } as never);
   return (
     <View style={{ paddingVertical: compact ? 0 : space[3], gap: space[2] }}>
       {/* ponytail: compact (share sheet) clips to one chip row to keep the sheet short; a horizontal scroll or +N overflow is the upgrade */}
       <View accessibilityLiveRegion="polite" accessibilityLabel={tags.length ? `${tags.length} ${tags.length === 1 ? 'tag' : 'tags'}: ${tags.join(', ')}` : undefined}
         style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, alignItems: 'center', maxHeight: compact ? 30 : undefined, overflow: 'hidden' }}>
-        {tags.map((t) => <TagChip key={t} label={t} delay={Math.max(0, fresh.indexOf(t)) * 120} accessibilityLabel={`Remove tag ${t}`} onPress={() => engram().db.tags.remove(item.id, t)} />)}
+        {tags.map((t) => <TagChip key={t} label={t} delay={Math.max(0, fresh.indexOf(t)) * 120} accessibilityLabel={`Tag ${t}`} accessibilityHint={compact ? 'Double tap to remove' : 'Double tap to search this tag, double tap and hold to remove'} onPress={() => (compact ? remove(t) : open(t))} onLongPress={() => remove(t)} />)}
         {pending && !tags.length ? <Animated.View exiting={FadeOut.duration(120)}><Text size="xs" mono color="text3">tagging…</Text></Animated.View> : null}
         {draft === null ? (
           <TagChip label="+ tag" dashed accessibilityLabel="Add tag" onPress={() => setDraft('')} />

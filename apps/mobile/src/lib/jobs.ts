@@ -65,7 +65,9 @@ export function createJobs(ctx: JobCtx): Queue {
         } catch { /* a missing og:image never fails the extract */ }
       }
       const kinds: JobKind[] = ['autotag', 'classify', 'embed'];
-      if (db.files.of(itemId).some((f) => f.role === 'thumb' || f.role === 'original' || f.role === 'poster')) kinds.unshift('thumb');
+      // A preview image often carries the words that matter (reel hooks, slide titles, screenshots of text), so it
+      // is read with on-device OCR before tagging; the text lands in ocr_text and is searchable.
+      if (db.files.of(itemId).some((f) => f.role === 'thumb' || f.role === 'original' || f.role === 'poster')) kinds.unshift('thumb', 'ocr');
       queue.enqueueFor(itemId, kinds);
     },
     // Library tags that appear in the card's own text; no model needed, so every save gets tags immediately.

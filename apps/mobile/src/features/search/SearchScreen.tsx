@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { textDefaults } from '../../ui/Text';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { search as core } from '@engram/core';
 import { engram, useEngram, useToast } from '../../lib/engram';
 import { useTheme } from '../../theme/useTheme';
@@ -29,8 +29,10 @@ export function SearchScreen() {
   const { engram: e } = useEngram();
   const toast = useToast((s) => s.show);
   const recent = useRecent();
-  const [chips, setChips] = useState<string[]>([]); // committed tokens, rendered inside the field
-  const [text, setText] = useState('');
+  // Opened with ?q=tag:x (tapping a tag on a card) the query starts as a chip; plain words start in the field.
+  const { q } = useLocalSearchParams<{ q?: string }>();
+  const [chips, setChips] = useState<string[]>(() => (q && core.tokenize(q).every((t) => t.kind === 'op') ? core.tokenize(q).map((t) => t.raw) : [])); // committed tokens, rendered inside the field
+  const [text, setText] = useState(() => (q && !core.tokenize(q).every((t) => t.kind === 'op') ? q : ''));
   const query = [...chips, text].join(' ').trim();
   const { hits, ms } = useSearch(query);
 

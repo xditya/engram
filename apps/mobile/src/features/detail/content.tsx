@@ -100,7 +100,6 @@ function Preview({ item }: { item: Item }) {
         ) : null}
         {item.summary ? <Text lineHeight="reader" color="text2">{item.summary}</Text> : null}
         {item.body && item.type === 'video' ? <Text size="sm" lineHeight="reader" color="text2">{item.body}</Text> : null}
-        {item.url ? <Button title="Open" onPress={() => openOriginal(item.url)} style={{ marginTop: space[2] }} /> : null}
       </View>
     </ScrollView>
   );
