@@ -14,7 +14,7 @@ export const KEY_PAGES: Record<string, { name: string; url: string }> = {
   groq: { name: 'Groq', url: 'https://console.groq.com/keys' },
   mistral: { name: 'Mistral', url: 'https://console.mistral.ai/api-keys' },
 };
-const DEFAULT_MODEL: Record<string, string> = { anthropic: 'claude-haiku-4-5', gemini: 'gemini-2.0-flash' };
+const DEFAULT_MODEL: Record<string, string> = { anthropic: 'claude-haiku-4-5', gemini: 'gemini-3.6-flash' };
 
 export const modelOf = (s: IntelligenceSettings): string =>
   s.chatModel || DEFAULT_MODEL[s.provider ?? ''] || (s.provider && s.provider in ai.PRESETS ? ai.PRESETS[s.provider as keyof typeof ai.PRESETS].chatModel : '');

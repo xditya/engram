@@ -33,10 +33,6 @@ export function CardDetail({ id, active, onDismiss }: { id: string; active: bool
     <Pressable accessibilityRole="button" accessibilityLabel="Show recognised text" accessibilityState={{ selected: showText }} onPress={() => setShowText((v) => !v)} hitSlop={8} style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: space[2] }}>
       <Text size="xs" weight={500} color={showText ? 'accent' : 'text2'}>Text</Text>
     </Pressable>
-  ) : item.url && item.type !== 'image' ? (
-    <Pressable accessibilityRole="button" onPress={() => openOriginal(item.url)} hitSlop={8} style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: space[2] }}>
-      <Text size="sm" weight={500} color="accent">Open</Text>
-    </Pressable>
   ) : null;
   // iOS presents this as a page sheet that already sits below the status bar; only Android needs the inset.
   const top = RN.OS === 'ios' ? space[1] : insets.top;

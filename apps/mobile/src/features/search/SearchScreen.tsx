@@ -5,7 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ai, search as core } from '@engram/core';
 import { engram, useEngram, useToast } from '../../lib/engram';
 import { useTheme } from '../../theme/useTheme';
-import { Hairline, Screen, Text } from '../../ui';
+import { Hairline, HelpTip, Screen, Text } from '../../ui';
 import { useRecent } from './recent';
 import { ItemGrid, toEntry } from '../spaces/ItemGrid';
 import { useSearch } from './useSearch';
@@ -45,7 +45,6 @@ export function SearchScreen() {
   // Ask mode: a question-shaped query offers an answer from the model over the matching cards, above the results.
   const asking = useAsk();
   const provider = e ? askProvider() : null; // cheap; recomputed as the on-device model loads or settings change
-  const canAsk = !!provider && question;
   const askNow = () => { if (!provider) return; recent.add(query); void asking.ask(query); };
   const askHeader = asking.state.status !== 'idle' && provider
     ? <AskCard state={asking.state} providerName={provider.name} onDevice={provider.onDevice} onAsk={(q) => void asking.ask(q)} onOpen={() => recent.add(asking.state.question)} />
@@ -89,7 +88,7 @@ export function SearchScreen() {
           autoFocus
           value={text}
           onChangeText={onChange}
-          onSubmitEditing={() => { if (canAsk) askNow(); else commit(); }}
+          onSubmitEditing={() => { if (provider && query) askNow(); else commit(); }}
           onKeyPress={(ev) => { if (ev.nativeEvent.key === 'Backspace' && !text) setChips((cs) => cs.slice(0, -1)); }}
           placeholderTextColor={c.text3}
           cursorColor={c.accent}
@@ -109,7 +108,7 @@ export function SearchScreen() {
       <Pressable accessibilityRole="button" onPress={() => router.back()} hitSlop={12}><Text size="sm" color="text2">Cancel</Text></Pressable>
       </View>
 
-      {canAsk && asking.state.status === 'idle' ? (
+      {provider && query && asking.state.status === 'idle' ? (
         <View style={{ flexDirection: 'row', paddingHorizontal: space[4], paddingBottom: space[3] }}>
           <Pressable accessibilityRole="button" accessibilityHint={`Answers from your cards using ${provider!.name}`} onPress={askNow}
             style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 36, paddingHorizontal: 12, borderRadius: 18, backgroundColor: pressed ? c.accent : c.accentSoft })}>
@@ -134,7 +133,23 @@ export function SearchScreen() {
         </>
       ) : (
         <ScrollView keyboardShouldPersistTaps="always" contentContainerStyle={{ paddingHorizontal: space[4], gap: 10 }}>
-          <Text size="xs" color="text3">Operators</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text size="xs" color="text3">Operators</Text>
+            <HelpTip title="Search operators" lines={[
+              'Type a word to search titles, text, tags and the words read from images. Add an operator to narrow it down; they combine.',
+              ['type:', 'article, image, note, quote, pdf, video, product'],
+              ['tag:', 'cards with that tag, e.g. tag:fonts'],
+              ['site:', 'cards from a site, e.g. site:instagram.com'],
+              ['text:', 'must appear in the page text, not just the title'],
+              ['before: / after:', 'saved before or after a date: 2026-05-01, yesterday, last week'],
+              ['color:', 'images and thumbnails with that colour'],
+              ['is:pinned', 'pinned cards only; is:trash for cards you let go'],
+              ['in:', 'cards inside a Space'],
+              ['-word', 'leave out cards containing the word'],
+              ['"exact phrase"', 'those words together, in that order'],
+              'Press space after an operator and it turns into a chip. A search you want to keep can be saved as a Space.',
+            ]} />
+          </View>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space[2] }}>
             {OPERATORS.map((op) => <OpChip key={op} label={op} onPress={() => setText((t) => t + op)} />)}
           </View>

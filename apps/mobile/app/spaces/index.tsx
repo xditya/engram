@@ -7,7 +7,7 @@ import { reorderSpaces, spaceItems } from '../../src/features/spaces/spaces';
 import { thumbOf } from '../../src/features/spaces/thumb';
 import { engram, useLiveQuery } from '../../src/lib/engram';
 import { useTheme } from '../../src/theme/useTheme';
-import { Button, Screen, Text, BackButton } from '../../src/ui';
+import { Button, Screen, Text, BackButton, HelpTip } from '../../src/ui';
 
 export default function Spaces() {
   const { space } = useTheme();
@@ -32,6 +32,11 @@ export default function Spaces() {
       <View style={{ height: 56, flexDirection: 'row', alignItems: 'center', paddingHorizontal: space[2], gap: space[1] }}>
         <BackButton />
         <Text size="xl" weight={600} style={{ flex: 1 }}>Spaces</Text>
+        <HelpTip title="Spaces" lines={[
+          'A Space is a shelf inside your library. Put cards on it by hand from a card’s details, or save a search and the shelf fills itself as matching cards arrive.',
+          'A card can sit on several Spaces at once, and removing it from a Space never deletes the card.',
+          'Drag Spaces to reorder them. Tap one to open it; the ··· menu renames or deletes the Space (its cards stay in the library).',
+        ]} />
         {data?.spaces.length ? (
           <Pressable accessibilityRole="button" onPress={() => setCreating(true)} style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: space[2] }}>
             <Text size="sm" weight={500} color="accent">New Space</Text>

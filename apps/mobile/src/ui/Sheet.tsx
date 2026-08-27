@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Keyboard, Pressable, StyleSheet, View } from 'react-native';
-import Animated, { Easing, FadeIn, FadeOut, LinearTransition, SlideInDown, SlideOutDown } from 'react-native-reanimated';
+import Animated, { Easing, FadeIn, FadeOut, LinearTransition, SlideInDown, SlideOutDown, runOnJS } from 'react-native-reanimated';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/useTheme';
 
@@ -22,12 +23,15 @@ export function Sheet({ open, onClose, children }: { open: boolean; onClose: () 
   const { c, radius, motion, space } = useTheme();
   const insets = useSafeAreaInsets();
   const kb = useKeyboardHeight();
+  // A downward drag on the panel closes it; the offset keeps taps and short scrolls inside the sheet untouched.
+  const pan = Gesture.Pan().activeOffsetY(14).failOffsetY(-14).onEnd((e) => { if (e.translationY > 60 || e.velocityY > 900) runOnJS(onClose)(); });
   if (!open) return null;
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
       <Animated.View entering={FadeIn.duration(motion.slow)} exiting={FadeOut.duration(motion.base)} style={StyleSheet.absoluteFill}>
         <Pressable accessibilityLabel="Close" onPress={onClose} style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.4)' }]} />
       </Animated.View>
+      <GestureDetector gesture={pan}>
       <Animated.View
         entering={SlideInDown.duration(motion.slow).easing(ease)}
         exiting={SlideOutDown.duration(motion.base).easing(ease)}
@@ -47,6 +51,7 @@ export function Sheet({ open, onClose, children }: { open: boolean; onClose: () 
         <View style={{ alignSelf: 'center', width: 36, height: 4, borderRadius: 2, backgroundColor: c.line, marginVertical: space[2] }} />
         {children}
       </Animated.View>
+      </GestureDetector>
     </View>
   );
 }

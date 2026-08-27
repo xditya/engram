@@ -38,7 +38,7 @@ export function Text({ size = 'md', weight = 400, mono = false, color = 'text', 
           fontSize: px,
           lineHeight: Math.round(px * t.font.lineHeight[lh]),
           color: t.c[color],
-          fontVariant: mono ? undefined : ['tabular-nums'], // every mono glyph is tabular already; the feature request is what CoreText can mishandle
+          fontVariant: mono ? [] : ['tabular-nums'], // every mono glyph is tabular already; the feature request is what CoreText can mishandle
           letterSpacing: px > 22 ? -0.01 * px : undefined,
         },
         style,

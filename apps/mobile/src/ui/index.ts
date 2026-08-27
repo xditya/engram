@@ -8,3 +8,4 @@ export { ProgressLine } from './ProgressLine';
 export { Hairline } from './Hairline';
 export { Fade } from './Fade';
 export { BackButton } from './BackButton';
+export { HelpTip } from './HelpTip';

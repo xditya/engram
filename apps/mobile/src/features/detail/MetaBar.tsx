@@ -1,18 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
-import Animated, { Easing, FadeIn, FadeOut, ReduceMotion, useReducedMotion } from 'react-native-reanimated';
+import Animated, { Easing, FadeIn, FadeOut, ReduceMotion, runOnJS, useReducedMotion } from 'react-native-reanimated';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useNavigation } from 'expo-router';
 import type { Item } from '@engram/core';
 import { Trace } from '../../icons/Icon';
 import { engram, useLiveQuery } from '../../lib/hub';
 import { useToast } from '../../lib/toast';
 import { useTheme } from '../../theme/useTheme';
-import { Button, Hairline, Text } from '../../ui';
+import { Button, Hairline, Sheet, Text } from '../../ui';
 import { textDefaults } from '../../ui/Text';
 import { shortDate, traceLine } from './format';
 import { openOriginal } from './content';
-import { shareItem } from './share';
+import { copyItem, shareItem } from './share';
 
 const MAX_PINNED = 5;
 
@@ -120,6 +121,17 @@ export function SpaceChips({ itemId, before }: { itemId: string; before?: React.
   );
 }
 
+// A drawn chevron (two short bars), because the ⌃ glyph sits badly in every font we ship.
+function Chevron({ color, down }: { color: string; down?: boolean }) {
+  const bar = { position: 'absolute' as const, width: 9, height: 2, borderRadius: 1, backgroundColor: color };
+  return (
+    <View style={{ width: 14, height: 10, justifyContent: 'center' }}>
+      <View style={[bar, { left: 0, transform: [{ rotate: down ? '45deg' : '-45deg' }] }]} />
+      <View style={[bar, { right: 0, transform: [{ rotate: down ? '-45deg' : '45deg' }] }]} />
+    </View>
+  );
+}
+
 function RowLine({ children, onPress, label }: { children: React.ReactNode; onPress?: () => void; label?: string }) {
   const { space } = useTheme();
   return (
@@ -151,63 +163,76 @@ export function MetaBar({ item, onDismiss }: { item: Item; onDismiss: () => void
     show('Let go · shake to undo', 5000, { label: 'Undo', shake: true, onPress: () => engram().db.items.restore(item.id) });
   };
 
-  if (!open) {
-    return (
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={`${line}. Show details`}
-        onPress={() => setOpen(true)}
-        style={{ position: 'absolute', left: space[4], right: space[4], bottom: insets.bottom + space[3], minHeight: 44, flexDirection: 'row', alignItems: 'center', paddingHorizontal: space[4], borderRadius: 14, backgroundColor: c.surface, borderWidth: 1, borderColor: c.line }}
-      >
-        <Text size="xs" mono color="text2" numberOfLines={1} style={{ flex: 1 }}>{line}</Text>
-        <Text size="sm" color="text3">⌃</Text>
-      </Pressable>
-    );
-  }
+  // Bottom action bar: Open (the thing people reach for), Copy, Share, and the details sheet. The sheet is
+  // its own gesture target: a swipe down closes it, and the card's own swipe-to-dismiss is off while it is open.
+  const nav = useNavigation();
+  useEffect(() => { nav.setOptions({ gestureEnabled: !open }); return () => nav.setOptions({ gestureEnabled: true }); }, [nav, open]);
+  const copy = () => void copyItem(item).then((what) => show(what ? `${what} copied` : 'Nothing to copy')).catch((e: Error) => show(e.message));
+  const share = () => void shareItem(item).catch((e: Error) => { if (!/cancel|dismiss/i.test(e.message)) show(e.message); });
+  const pan = Gesture.Pan().activeOffsetY(12).onEnd((e) => { if (e.translationY > 60 || e.velocityY > 800) runOnJS(setOpen)(false); });
+
+  const iconBtn = (label: string, onPress: () => void) => (
+    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={({ pressed }) => ({ height: 44, paddingHorizontal: space[3], borderRadius: 12, borderWidth: 1, borderColor: c.line, backgroundColor: pressed ? c.surface2 : c.surface, justifyContent: 'center' })}>
+      <Text size="sm" weight={500}>{label}</Text>
+    </Pressable>
+  );
 
   return (
-    <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, maxHeight: '70%', backgroundColor: c.surface, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, borderTopWidth: 1, borderTopColor: c.line }}>
-      <Pressable accessibilityRole="button" accessibilityLabel="Hide details" onPress={() => setOpen(false)} style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', paddingHorizontal: space[4], paddingTop: space[2] }}>
-        <Text size="xs" mono color="text2" numberOfLines={1} style={{ flex: 1 }}>{line}</Text>
-        <Text size="sm" color="text3">⌄</Text>
-      </Pressable>
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: space[4], paddingBottom: insets.bottom + space[4] }}>
-        <Tags item={item} tags={tags} />
-        <Hairline />
-        {item.summary && item.type !== 'link' ? (
-          <>
-            <RowLine onPress={() => setSummaryOpen((v) => !v)} label={summaryOpen ? 'Hide summary' : 'Show summary'}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                <Text size="sm">Summary</Text>
-                <Text size="sm" color="text3">{summaryOpen ? '⌄' : '›'}</Text>
+    <>
+      <View style={{ position: 'absolute', left: space[4], right: space[4], bottom: insets.bottom + space[3], flexDirection: 'row', alignItems: 'center', gap: space[2] }}>
+        {item.url ? <Button title="Open" height={44} onPress={() => openOriginal(item.url)} style={{ flex: 1 }} /> : null}
+        {iconBtn('Copy', copy)}
+        {iconBtn('Share', share)}
+        <Pressable accessibilityRole="button" accessibilityLabel={`Details: ${line}`} onPress={() => setOpen(true)} style={({ pressed }) => ({ height: 44, minWidth: 44, paddingHorizontal: space[3], borderRadius: 12, borderWidth: 1, borderColor: c.line, backgroundColor: pressed ? c.surface2 : c.surface, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6, flex: item.url ? 0 : 1 })}>
+          {item.url ? null : <Text size="xs" mono color="text2" numberOfLines={1} style={{ flexShrink: 1 }}>{line}</Text>}
+          <Chevron color={c.text2} />
+        </Pressable>
+      </View>
+
+      <Sheet open={open} onClose={() => setOpen(false)}>
+        <GestureDetector gesture={pan}>
+          <View style={{ maxHeight: '100%' }}>
+            <Text size="xs" mono color="text2" numberOfLines={1} style={{ paddingVertical: space[2] }}>{line}</Text>
+            <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: 460 }} contentContainerStyle={{ paddingBottom: space[2] }}>
+              <Tags item={item} tags={tags} />
+              <Hairline />
+              {item.summary && item.type !== 'link' ? (
+                <>
+                  <RowLine onPress={() => setSummaryOpen((v) => !v)} label={summaryOpen ? 'Hide summary' : 'Show summary'}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                      <Text size="sm">Summary</Text>
+                      <Text size="sm" color="text3">{summaryOpen ? '⌄' : '›'}</Text>
+                    </View>
+                    {summaryOpen ? <Text size="sm" color="text2" lineHeight="reader" style={{ marginTop: space[2] }}>{item.summary}</Text> : null}
+                  </RowLine>
+                  <Hairline />
+                </>
+              ) : null}
+              {item.url ? (
+                <>
+                  <RowLine onPress={() => openOriginal(item.url)} label="Open original">
+                    <Text size="xs" mono color="accent" numberOfLines={2}>{item.url.replace(/^https?:\/\/(www\.)?/, '')}</Text>
+                  </RowLine>
+                  <Hairline />
+                </>
+              ) : null}
+              <RowLine>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[2] }}>
+                  <Trace size={12} opacity={Math.max(0.25, trace.strength)} />
+                  <Text size="sm">{trace.text}</Text>
+                </View>
+              </RowLine>
+              <SpaceChips itemId={item.id} before={<Hairline />} />
+              <Hairline />
+              <View style={{ flexDirection: 'row', gap: space[2], paddingTop: space[4] }}>
+                <Button title={pinned ? 'Unpin' : pinFull ? `${MAX_PINNED} pinned` : 'Pin'} variant="outline" height={44} disabled={pinFull} onPress={togglePin} style={{ flex: 1 }} />
+                <Button title={confirmLetGo ? 'Tap again to let go' : 'Let go'} variant="outline" height={44} danger onPress={letGo} style={{ flex: confirmLetGo ? 2 : 1 }} />
               </View>
-              {summaryOpen ? <Text size="sm" color="text2" lineHeight="reader" style={{ marginTop: space[2] }}>{item.summary}</Text> : null}
-            </RowLine>
-            <Hairline />
-          </>
-        ) : null}
-        {item.url ? (
-          <>
-            <RowLine onPress={() => openOriginal(item.url)} label="Open original">
-              <Text size="xs" mono color="accent" numberOfLines={2}>{item.url.replace(/^https?:\/\/(www\.)?/, '')}</Text>
-            </RowLine>
-            <Hairline />
-          </>
-        ) : null}
-        <RowLine>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[2] }}>
-            <Trace size={12} opacity={Math.max(0.25, trace.strength)} />
-            <Text size="sm">{trace.text}</Text>
+            </ScrollView>
           </View>
-        </RowLine>
-        <SpaceChips itemId={item.id} before={<Hairline />} />
-        <Hairline />
-        <View style={{ flexDirection: 'row', gap: space[2], paddingTop: space[4] }}>
-          <Button title={pinned ? 'Unpin' : pinFull ? `${MAX_PINNED} pinned` : 'Pin'} variant="outline" height={44} disabled={pinFull} onPress={togglePin} style={{ flex: 1 }} />
-          <Button title="Share" variant="outline" height={44} onPress={() => void shareItem(item).catch((e: Error) => show(e.message))} style={{ flex: 1 }} />
-          <Button title={confirmLetGo ? 'Tap again to let go' : 'Let go'} variant="outline" height={44} danger onPress={letGo} style={{ flex: confirmLetGo ? 2 : 1 }} />
-        </View>
-      </ScrollView>
-    </View>
+        </GestureDetector>
+      </Sheet>
+    </>
   );
+
 }

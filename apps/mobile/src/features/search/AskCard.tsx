@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Pressable, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import Animated, { FadeIn, FadeInDown, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { extract, type Item } from '@engram/core';
@@ -11,6 +12,28 @@ import type { AskState } from './useAsk';
 
 // The answer sits above the results as one card: a breathing trace while the model works, then the text with
 // [n] citations as accent chips that open the card, the cards it drew on, and a follow-up field.
+
+// The one place the app uses a gradient: a thin ring that marks the card as the model's voice, not a saved card.
+function GradientRing({ radius }: { radius: number }) {
+  const { c } = useTheme();
+  const [size, setSize] = useState({ w: 0, h: 0 });
+  return (
+    <View pointerEvents="none" style={StyleSheet.absoluteFill} onLayout={(e) => setSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
+      {size.w ? (
+        <Svg width={size.w} height={size.h}>
+          <Defs>
+            <LinearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
+              <Stop offset="0" stopColor={c.accent} />
+              <Stop offset="0.55" stopColor="#B48CFF" />
+              <Stop offset="1" stopColor="#FF8FB1" />
+            </LinearGradient>
+          </Defs>
+          <Rect x={0.75} y={0.75} width={size.w - 1.5} height={size.h - 1.5} rx={radius} ry={radius} fill="none" stroke="url(#ring)" strokeWidth={1.5} />
+        </Svg>
+      ) : null}
+    </View>
+  );
+}
 
 function Thinking({ label }: { label: string }) {
   const { c } = useTheme();
@@ -55,8 +78,13 @@ export function AskCard({ state, providerName, onDevice, onAsk, onOpen }: { stat
   const cited = state.cited.map((i) => state.cards[i]).filter((x): x is Item => !!x);
   const shown = cited.length ? cited : state.cards.slice(0, 4);
   return (
-    <Animated.View entering={FadeInDown.duration(200)} style={{ marginHorizontal: space[4], marginBottom: space[4], padding: space[4], gap: space[3], borderRadius: radius.lg, backgroundColor: c.surface, borderWidth: 1, borderColor: c.line }}>
-      <Text size="xs" mono color="text3" numberOfLines={2}>{state.question}</Text>
+    <Animated.View entering={FadeInDown.duration(200)} style={{ marginHorizontal: space[4], marginBottom: space[4], borderRadius: radius.lg, shadowColor: c.accent, shadowOpacity: 0.18, shadowRadius: 18, shadowOffset: { width: 0, height: 6 }, elevation: 4 }}>
+      <GradientRing radius={radius.lg} />
+      <View style={{ padding: space[4], gap: space[3], borderRadius: radius.lg, backgroundColor: c.surface, margin: 1.5 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <Trace size={14} color={c.accent} />
+        <Text size="xs" mono color="text3" numberOfLines={2} style={{ flex: 1 }}>{state.question}</Text>
+      </View>
       {state.status === 'thinking' ? (
         <Thinking label={onDevice ? 'Reading your cards on this device… this takes a while' : 'Reading your cards…'} />
       ) : state.status === 'error' ? (
@@ -95,6 +123,7 @@ export function AskCard({ state, providerName, onDevice, onAsk, onOpen }: { stat
           <Text size="xs" color="text3">{onDevice ? 'Answered on this device. Nothing was sent anywhere.' : `Matching cards were sent to ${providerName} to answer this.`}</Text>
         </Animated.View>
       )}
+      </View>
     </Animated.View>
   );
 }
