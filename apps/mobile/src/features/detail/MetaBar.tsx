@@ -9,7 +9,7 @@ import { Trace } from '../../icons/Icon';
 import { engram, useLiveQuery } from '../../lib/hub';
 import { useToast } from '../../lib/toast';
 import { useTheme } from '../../theme/useTheme';
-import { Button, Hairline, Sheet, Text } from '../../ui';
+import { Button, Hairline, HelpTip, Sheet, Text } from '../../ui';
 import { textDefaults } from '../../ui/Text';
 import { shortDate, traceLine } from './format';
 import { openOriginal } from './content';
@@ -192,7 +192,18 @@ export function MetaBar({ item, onDismiss }: { item: Item; onDismiss: () => void
       <Sheet open={open} onClose={() => setOpen(false)}>
         <GestureDetector gesture={pan}>
           <View style={{ maxHeight: '100%' }}>
-            <Text size="xs" mono color="text2" numberOfLines={1} style={{ paddingVertical: space[2] }}>{line}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[3], paddingVertical: space[2] }}>
+              <Text size="xs" mono color="text2" numberOfLines={1} style={{ flex: 1 }}>{line}</Text>
+              <HelpTip title="Card details" lines={[
+                ['tag', 'Tap a tag to search your library for it. Press and hold to remove it; Undo appears for a few seconds.'],
+                ['+ tag', 'Adds a tag. Tags you add teach the model how you file things.'],
+                ['trace', 'The small mark fades as a card goes unopened. Opening it strengthens the trace; Resurface brings faded cards back.'],
+                ['Spaces', 'Tap a Space to put the card on that shelf, tap again to take it off. A card can sit on several.'],
+                ['Pin', 'Keeps the card at the top of the library. Up to five at a time.'],
+                ['Let go', 'Moves the card out of the library. It stays recoverable for 30 days under Settings, then is removed from every device.'],
+                'Swipe down or tap outside to close this panel; swipe down on the card itself to close the card.',
+              ]} />
+            </View>
             <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: 460 }} contentContainerStyle={{ paddingBottom: space[2] }}>
               <Tags item={item} tags={tags} />
               <Hairline />

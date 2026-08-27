@@ -38,19 +38,22 @@ export function SelectBar({ ids, onDone }: { ids: string[]; onDone: () => void }
     show(`Let go ${n} · shake to undo`, 5000, { label: 'Undo', shake: true, onPress: () => engram().db.transaction(() => { for (const id of gone) engram().db.items.restore(id); }) });
   };
 
-  const action = (label: string, onPress: () => void, danger?: boolean) => (
-    <Pressable accessibilityRole="button" disabled={none} onPress={onPress} style={({ pressed }) => ({ flex: 1, minHeight: 48, alignItems: 'center', justifyContent: 'center', opacity: none ? 0.4 : pressed ? 0.7 : 1 })}>
-      <Text size="sm" weight={500} color={danger ? 'danger' : 'text'}>{label}</Text>
+  // One floating card, like the card detail's action bar: the count on the left, bordered buttons on the right.
+  const action = (label: string, onPress: () => void, danger?: boolean, grow?: boolean) => (
+    <Pressable accessibilityRole="button" disabled={none} onPress={onPress}
+      style={({ pressed }) => ({ height: 40, paddingHorizontal: space[3], borderRadius: 10, borderWidth: 1, borderColor: danger ? c.danger : c.line, backgroundColor: pressed ? c.surface2 : c.surface, alignItems: 'center', justifyContent: 'center', opacity: none ? 0.4 : 1, flexGrow: grow ? 1 : 0 })}>
+      <Text size="sm" weight={500} color={danger ? 'danger' : 'text'} numberOfLines={1}>{label}</Text>
     </Pressable>
   );
 
   return (
     <>
-      <View style={{ backgroundColor: c.surface, borderTopWidth: 1, borderTopColor: c.line, paddingBottom: insets.bottom }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: space[2] }}>
+      <View pointerEvents="box-none" style={{ position: 'absolute', left: space[4], right: space[4], bottom: insets.bottom + space[3] }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[2], padding: space[2], paddingLeft: space[3], borderRadius: 16, backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 4 }}>
+          <Text size="xs" mono color="text2" style={{ flex: 1 }} numberOfLines={1}>{none ? 'Select cards' : `${n} selected`}</Text>
           {action('Tag', () => setMode('tag'))}
-          {action('Add to Space', () => setMode('space'))}
-          {action(confirm ? `Tap again to let go ${n}` : 'Let go', letGo, true)}
+          {action('Space', () => setMode('space'))}
+          {action(confirm ? `Let go ${n}?` : 'Let go', letGo, true)}
         </View>
       </View>
       <Sheet open={mode === 'tag'} onClose={() => setMode(null)}>
