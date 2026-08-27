@@ -51,7 +51,8 @@ export function parseMarkdown(text: string): Block[] {
     // An indented line right after a list item is that item wrapping onto a new line, not a new paragraph.
     const last = blocks[blocks.length - 1];
     if (!para && /^\s{2,}\S/.test(raw) && last && (last.kind === 'bullet' || last.kind === 'number' || last.kind === 'todo')) {
-      last.inline = parseInline([...last.inline.map((p) => ('href' in p ? `[${p.text}](${p.href})` : p.kind === 'bold' ? `**${p.text}**` : p.kind === 'code' ? `\`${p.text}\`` : p.kind === 'italic' ? `*${p.text}*` : p.text)).join(''), line.trim()].join(' '));
+      const source = last.inline.map((p) => ('href' in p ? `[${p.text}](${p.href})` : p.kind === 'bold' ? `**${p.text}**` : p.kind === 'code' ? `\`${p.text}\`` : p.kind === 'italic' ? `*${p.text}*` : p.text)).join('');
+      last.inline = parseInline(`${source} ${line.trim()}`);
       return;
     }
     if (para) para.lines.push(line); else para = { start: i, lines: [line] };
