@@ -169,7 +169,18 @@ img { max-width: 100%; height: auto; display: block; }
 
 /* Features -------------------------------------------------------------- */
 
-.features { padding-top: 140px; }
+.what { padding-top: 120px; }
+.what-tldr { font-size: 22px; line-height: 1.5; letter-spacing: -0.01em; max-width: 720px; margin-top: 20px; text-wrap: pretty; }
+.what-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; margin-top: 48px; }
+.what-steps h3 { font-size: 17px; font-weight: 600; margin-top: 10px; }
+.what-steps p { font-size: 15px; line-height: 1.5; color: var(--text2); margin-top: 6px; text-wrap: pretty; }
+.what-n { font-family: var(--mono); font-size: 13px; color: var(--accent); }
+.what-like { font-size: 15px; line-height: 1.55; color: var(--text2); max-width: 640px; margin-top: 40px; text-wrap: pretty; }
+@media (max-width: 720px) {
+  .what-tldr { font-size: 19px; }
+  .what-steps { grid-template-columns: 1fr; gap: 22px; }
+}
+.features { padding-top: 120px; }
 .feature {
   display: grid;
   grid-template-columns: 88px 1fr 400px;
