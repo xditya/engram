@@ -52,6 +52,15 @@ export const reddit: Enricher = {
 // A missing/private post has no og:title and <title>Instagram</title>, so that title is never used.
 // The /embed/captioned/ page still carries the image and handle when the post page does not.
 const igCode = (u: URL) => /^\/(?:[^/]+\/)?(p|reel|reels|tv)\/([\w-]+)/.exec(u.pathname);
+// First sentence of a caption, or its first words up to ~80 characters, never cut inside a word.
+export const headline = (caption: string, max = 80): string => {
+  const first = /^(.{12,}?[.!?])\s/.exec(caption)?.[1];
+  if (first && first.length <= max * 1.4) return first; // a whole sentence is worth a little extra length
+  if (caption.length <= max) return caption;
+  const cut = caption.slice(0, max);
+  return `${cut.slice(0, Math.max(cut.lastIndexOf(' '), 40)).replace(/[,;:\s]+$/, '')}…`;
+};
+
 export const instagram: Enricher = {
   id: 'instagram',
   match: (u) => (is(u, 'instagram.com') && igCode(u) ? 10 : 0),
@@ -71,7 +80,8 @@ export const instagram: Enricher = {
         handle ??= /class="UsernameText">([^<]+)</.exec(embed)?.[1];
       } catch { /* login wall or offline: the card keeps what the post page gave */ }
     }
-    const title = (handle ? `@${handle} on Instagram` : 'Instagram post') + (caption ? `: ${caption.slice(0, 80)}` : '');
+    // The caption is what the post is about; the handle only names the card when there is no caption to use.
+    const title = caption ? headline(caption) : handle ? `@${handle} on Instagram` : 'Instagram post';
     return {
       // A post renders as a link card (thumb + caption + handle); a reel is a video only once a poster exists.
       type: kind !== 'p' && img ? 'video' : 'link',

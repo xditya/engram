@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Platform } from '../src/platform';
 import { runEnrichers, shortUrl, titleFromUrl } from '../src/extract';
+import { headline } from '../src/extract/sites';
 
 function fakePlatform(routes: Record<string, string>) {
   const calls: string[] = [];
@@ -32,7 +33,7 @@ describe('instagram', () => {
     const r = await runEnrichers('https://www.instagram.com/p/DcOX3hWFiey/?igsh=abc', { platform });
     expect(calls).toEqual(['https://www.instagram.com/p/DcOX3hWFiey/?igsh=abc']); // no embed fetch needed
     expect(r.type).toBe('link');
-    expect(r.title).toBe('@nasa on Instagram: With your powers combined… This colorful picture');
+    expect(r.title).toBe('With your powers combined… This colorful picture');
     expect(r.summary).toBe('With your powers combined… This colorful picture');
     expect(meta(r)).toMatchObject({ shortcode: 'DcOX3hWFiey', handle: 'nasa' });
     expect(r.files).toContainEqual({ role: 'thumb', url: 'https://scontent.cdninstagram.com/v/t51.82787-15/780550892_n.jpg?x=1&y=2' });
@@ -128,9 +129,19 @@ describe('shortUrl', () => {
 
 describe('notion', () => {
   it('replaces the site tagline with the page name from the url slug', async () => {
-    const html = '<html><head><title>Notion – The all-in-one workspace for your notes, tasks, wikis, and databases.</title><meta property="og:title" content="Notion – The all-in-one workspace for your notes, tasks, wikis, and databases." /></head><body></body></html>';
-    const { platform } = fakePlatform({ 'https://xditya.notion.site/': html });
-    const r = await runEnrichers('https://xditya.notion.site/Launch-plan-1a2b3c4d5e6f7890abcdef1234567890', { platform });
-    expect(r.title).toBe('Launch plan');
+    const html = '<html><head><title>Notion | Where teams and agents work together</title><meta property="og:title" content="Notion | Where teams and agents work together" /><meta property="og:description" content="A collaborative AI workspace, built on your company context." /><meta property="og:image" content="https://www.notion.so/front-static/meta/og-default.png" /></head><body></body></html>';
+    const { platform } = fakePlatform({ 'https://striped-thief-c4a.notion.site/': html });
+    const r = await runEnrichers('https://striped-thief-c4a.notion.site/The-AntiGravity-Pro-Level-Blueprint-31773bd1b02b8044bf81fa6d9217b1ac?mcp_token=abc&source=copy_link', { platform });
+    expect(r.title).toBe('The AntiGravity Pro Level Blueprint');
+    expect(r.summary).toBeUndefined();
+    expect(r.files ?? []).toEqual([]);
+  });
+});
+
+describe('headline', () => {
+  it('takes the first sentence, else cuts at a word', () => {
+    expect(headline('Tonight, take a moment to look up and enjoy one of nature’s timeless sights: a full Moon. Beautiful, familiar.')).toBe('Tonight, take a moment to look up and enjoy one of nature’s timeless sights: a full Moon.');
+    expect(headline('short caption')).toBe('short caption');
+    expect(headline('one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen')).toBe('one two three four five six seven eight nine ten eleven twelve thirteen…');
   });
 });

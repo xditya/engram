@@ -112,7 +112,8 @@ export function Card({ entry, width, selecting, selected, showTrace, fresh, onPr
         <View style={{ paddingHorizontal: pad, paddingTop: pad, paddingBottom: bottom, gap: 6 }}>
           {inset}
           {title(item.title ?? item.url ?? 'Untitled')}
-          {item.type === 'link' && item.url ? <Text size="xs" mono color="text3" numberOfLines={1}>{extract.shortUrl(item.url)}</Text> : domain}
+          {typeof meta.handle === 'string' ? <Text size="xs" mono color="text3" numberOfLines={1}>@{meta.handle}</Text>
+            : item.type === 'link' && item.url ? <Text size="xs" mono color="text3" numberOfLines={1}>{extract.shortUrl(item.url)}</Text> : domain}
         </View>
       );
   }

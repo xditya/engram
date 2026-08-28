@@ -1,7 +1,6 @@
 import { uiScale } from '../src/ui/Text';
 import '../src/polyfills';
-import { useCallback, useEffect, useState } from 'react';
-import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
+import { useEffect, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppState, Modal, Platform as RN, Pressable, View } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
@@ -16,13 +15,12 @@ import { useTheme } from '../src/theme/useTheme';
 import { useEngram, useToast, type ShareIntentLike } from '../src/lib/engram';
 import { ShareSheet, useSavedToast } from '../src/features/capture';
 import { listenForScreenshots, saveLatestScreenshot, useScreenshotPrompt } from '../src/lib/screenshots';
-import { useShake } from '../src/lib/useShake';
 import { useShareLog } from '../src/lib/shareLog';
 import { sharedPasteboardInfo, takeSharedPasteboard } from '../modules/engram-diag';
 import { UpdateSheet } from '../src/features/settings/UpdateSheet';
 import { useUpdates } from '../src/lib/updates';
 import * as Haptics from 'expo-haptics';
-import { Text } from '../src/ui';
+import { Toast, ToastCard as Card } from '../src/ui/Toast';
 import '../src/features/settings/appearance';
 
 SplashScreen.preventAutoHideAsync();
@@ -91,34 +89,6 @@ function useCaptureIntents() {
       </Pressable>
     </Modal>
   );
-}
-
-// Surface card anchored above the home search bar / FAB. Both the toast and the screenshot prompt are one
-// of these so they look identical; a card with no actions never intercepts taps.
-function Card({ message, actions }: { message: string; actions: { label: string; onPress: () => void; muted?: boolean }[] }) {
-  const { c, space, radius } = useTheme();
-  return (
-    <Animated.View entering={FadeInDown.duration(160)} exiting={FadeOutDown.duration(160)} pointerEvents={actions.length ? 'auto' : 'none'} accessibilityLiveRegion="polite"
-      style={{ flexDirection: 'row', alignItems: 'center', minHeight: 44, paddingLeft: space[4], paddingRight: actions.length ? space[1] : space[4], borderRadius: radius.md, backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 3 }}>
-      <Text size="sm" numberOfLines={2} style={{ flex: 1 }}>{message}</Text>
-      {actions.map((a) => (
-        <Pressable key={a.label} accessibilityRole="button" onPress={a.onPress} style={({ pressed }) => ({ minHeight: 44, paddingHorizontal: space[3], justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}>
-          <Text size="sm" weight={a.muted ? 400 : 500} color={a.muted ? 'text3' : 'accent'}>{a.label}</Text>
-        </Pressable>
-      ))}
-    </Animated.View>
-  );
-}
-
-// The app-wide one-line status ("Saved", "Couldn't sync"). Anything calls useToast.show; only this renders it.
-function Toast() {
-  const message = useToast((s) => s.message);
-  const action = useToast((s) => s.action);
-  const hide = useToast((s) => s.hide);
-  const fire = useCallback(() => { if (!action) return; void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); action.onPress(); hide(); }, [action, hide]);
-  useShake(!!action?.shake, fire);
-  if (!message) return null;
-  return <Card message={message} actions={action ? [{ label: action.label, onPress: () => { action.onPress(); hide(); } }] : []} />;
 }
 
 // "Save this screenshot?", shown for a few seconds after a screenshot is taken with engram in front.

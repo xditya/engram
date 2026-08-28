@@ -6,6 +6,8 @@ import { ai, search as core } from '@engram/core';
 import { engram, useEngram, useToast } from '../../lib/engram';
 import { useTheme } from '../../theme/useTheme';
 import { Hairline, HelpTip, Screen, Text } from '../../ui';
+import { ModalToast } from '../../ui/Toast';
+import * as Haptics from 'expo-haptics';
 import { useRecent } from './recent';
 import { ItemGrid, toEntry } from '../spaces/ItemGrid';
 import { useSearch } from './useSearch';
@@ -71,6 +73,7 @@ export function SearchScreen() {
 
   const saveSpace = () => {
     const s = engram().db.spaces.create(query, query);
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     recent.add(query);
     toast('Saved as Space');
     router.replace({ pathname: "/spaces/[id]" as never, params: { id: s.id } });
@@ -182,6 +185,7 @@ export function SearchScreen() {
           ) : null}
         </ScrollView>
       )}
+      <ModalToast />
     </Screen>
   );
 }

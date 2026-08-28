@@ -33,7 +33,7 @@ function merge(base: Enriched, over: Enriched): Enriched {
 }
 
 // Notion titles every public page with its own tagline ("Notion – The all-in-one workspace…"); the page name only lives in the url slug.
-const BARE_TITLE = /^(instagram|reddit|threads|threads • log in|linkedin|facebook|pinterest|spotify – web player|redirecting\.\.\.|log ?in|error|untitled|notion(\s*[–-].*)?)$/i;
+const BARE_TITLE = /^(instagram|reddit|threads|threads • log in|linkedin|facebook|pinterest|spotify – web player|redirecting\.\.\.|log ?in|error|untitled|notion(\s*[–—|:-].*)?)$/i;
 
 export async function runEnrichers(url: string, opts: { html?: string; platform: Platform }): Promise<Enriched> {
   const u = new URL(url);
@@ -64,7 +64,11 @@ export async function runEnrichers(url: string, opts: { html?: string; platform:
     try { out = merge(out, await e.enrich({ url: u, html, platform: opts.platform })); } catch { /* one failing enricher never sinks the item */ }
   }
   // JS-shell and login pages title themselves with the bare site name; a title built from the url beats that.
-  if (!out.title || BARE_TITLE.test(out.title)) out.title = titleFromUrl(url);
+  if (!out.title || BARE_TITLE.test(out.title)) {
+    out.title = titleFromUrl(url);
+    // Notion's og tags describe Notion, not the page: keep neither the pitch nor its hero image.
+    if (/(^|\.)notion\.(site|so)$/.test(u.hostname)) { out.summary = undefined; out.files = []; }
+  }
   return out;
 }
 

@@ -7,6 +7,7 @@ import { notes } from '@engram/core';
 import { Chip, HelpTip, Text, useKeyboardHeight } from '../../src/ui';
 import { engram, useToast } from '../../src/lib/engram';
 import { useTheme } from '../../src/theme/useTheme';
+import { ModalToast } from '../../src/ui/Toast';
 import { Markdown, blockRange } from '../../src/features/detail/Markdown';
 import { tidyNote } from '../../src/features/detail/tidy';
 
@@ -233,6 +234,7 @@ export default function NoteEditor({ id }: { id?: string } = {}) {
           style={{ minHeight: 44, minWidth: 96, flexGrow: 1, fontFamily: font.mono, fontSize: 14, color: c.text }}
         />
       </View>
+      <ModalToast bottom={60} />
     </View>
   );
 }

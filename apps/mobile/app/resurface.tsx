@@ -11,6 +11,7 @@ import { Trace } from '../src/icons/Icon';
 import { useEngram, useToast } from '../src/lib/engram';
 import { useTheme } from '../src/theme/useTheme';
 import { Button, Screen, Text } from '../src/ui';
+import { ModalToast } from '../src/ui/Toast';
 
 const MIN_SAVES = 50;
 const SWIPE = 110;
@@ -150,6 +151,7 @@ export default function Resurface() {
           <Button title="Keep" height={52} style={{ flex: 1 }} onPress={() => flyOut('keep')} />
         </View>
       </View>
+      <ModalToast bottom={52 + 36 + 24} />
     </Screen>
   );
 }

@@ -3,6 +3,7 @@ import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import Animated, { Easing, FadeIn, FadeOut, ReduceMotion, runOnJS, useReducedMotion } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 import { router, useNavigation } from 'expo-router';
 import type { Item } from '@engram/core';
 import { Trace } from '../../icons/Icon';
@@ -170,6 +171,7 @@ export function MetaBar({ item, onDismiss }: { item: Item; onDismiss: () => void
   // Throws the fetched preview away and runs extract again (which queues the thumbnail and OCR after it). For the
   // case where a page changed, or a preview never drew; the card's own text and tags are left alone.
   const reloadPreview = () => {
+    tap();
     const e = engram();
     const previews = e.db.files.of(item.id).filter((f) => f.role === 'thumb' || f.role === 'poster');
     e.db.transaction(() => { for (const f of previews) e.db.files.remove(f.hash); });
@@ -181,8 +183,10 @@ export function MetaBar({ item, onDismiss }: { item: Item; onDismiss: () => void
     setOpen(false);
     show('Fetching the preview again…');
   };
-  const copy = () => void copyItem(item).then((what) => show(what ? `${what} copied` : 'Nothing to copy')).catch((e: Error) => show(e.message));
-  const share = () => void shareItem(item).catch((e: Error) => { if (!/cancel|dismiss/i.test(e.message)) show(e.message); });
+  // Every bar button answers in the hand as well as on screen: the toast can sit behind the keyboard or a sheet.
+  const tap = () => void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+  const copy = () => void copyItem(item).then((what) => { void Haptics.notificationAsync(what ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Warning).catch(() => {}); show(what ? `${what} copied` : 'Nothing to copy'); }).catch((e: Error) => show(e.message));
+  const share = () => { tap(); void shareItem(item).catch((e: Error) => { if (!/cancel|dismiss/i.test(e.message)) show(e.message); }); };
   const pan = Gesture.Pan().activeOffsetY(12).onEnd((e) => { if (e.translationY > 60 || e.velocityY > 800) runOnJS(setOpen)(false); });
 
   const iconBtn = (label: string, onPress: () => void) => (
@@ -197,7 +201,7 @@ export function MetaBar({ item, onDismiss }: { item: Item; onDismiss: () => void
       <View pointerEvents="box-none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, paddingTop: 28, paddingHorizontal: space[4], paddingBottom: insets.bottom + space[3] }}>
         <Fade color={c.bg} solidAt={0.55} />
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[2] }}>
-        {item.url ? <Button title="Open" height={44} onPress={() => openOriginal(item.url)} style={{ flex: 1 }} /> : null}
+        {item.url ? <Button title="Open" height={44} onPress={() => { tap(); openOriginal(item.url); }} style={{ flex: 1 }} /> : null}
         {iconBtn('Copy', copy)}
         {iconBtn('Share', share)}
         <Pressable accessibilityRole="button" accessibilityLabel={`Details: ${line}`} onPress={() => setOpen(true)} style={({ pressed }) => ({ height: 44, minWidth: 44, paddingHorizontal: space[3], borderRadius: 12, borderWidth: 1, borderColor: c.line, backgroundColor: pressed ? c.surface2 : c.surface, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6, flex: item.url ? 0 : 1 })}>

@@ -10,7 +10,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   slug: 'engram',
   // 'app.engram' and the reversed Google client id are the OAuth redirect schemes Google requires on Android / iOS.
   scheme: ['engram', 'app.engram', 'com.googleusercontent.apps.290401707658-8ages5t18uh6v285nlik5afm87j7dpv7'],
-  version: '1.8.0',
+  version: '1.9.0',
   orientation: 'portrait',
   icon: './assets/icon.png',
   userInterfaceStyle: 'automatic',
@@ -87,7 +87,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         'expo-splash-screen', 'expo-router', 'expo-linking', 'expo-keep-awake', 'expo-system-ui', 'expo-symbols', 'expo-glass-effect',
         '@expo/dom-webview', '@expo/ui', 'expo-camera', 'expo-media-library', 'expo-image-picker', 'expo-document-picker',
         'expo-video-thumbnails', 'expo-background-task', 'expo-task-manager', 'expo-screen-capture', 'expo-sensors',
-        'expo-network', 'expo-device', 'expo-clipboard', 'expo-blur', 'expo-share-intent',
+        'expo-network', 'expo-device', 'expo-clipboard', 'expo-blur', 'expo-share-intent', 'expo-video',
         '@howincodes/expo-dynamic-app-icon', 'engram-ocr', 'engram-screenshots',
       ],
     }],
