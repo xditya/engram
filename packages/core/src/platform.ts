@@ -27,6 +27,7 @@ export interface OnDeviceAI {
   embed(texts: string[]): Promise<Float32Array[]>;
   ready(): Promise<boolean>;
   loaded?: boolean; // set once ready() succeeded; until then complete/embed would start a model download
+  contextChars?: number; // prompt budget (system + user) the model's context window can hold, once known
 }
 
 export interface Platform {

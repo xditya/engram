@@ -46,22 +46,30 @@ export async function retrieve(db: Database, question: string, embedQuery?: Embe
   const seen = new Set<string>();
   const out: Item[] = [];
   const take = (items: Item[]) => { for (const it of items) if (!seen.has(it.id) && out.length < MAX_CARDS) { seen.add(it.id); out.push(it); } };
-  // An embedder that fails (model still loading, runtime error) must not take the answer down with it: FTS alone still finds cards.
-  try { take(await hybrid(db, q, embedQuery, { now, limit: MAX_CARDS })); }
-  catch { take(search(db, q, { now, limit: MAX_CARDS })); }
-  // FTS wants every word; a question that names two topics at once matches nothing, so fall back to one word at a time.
-  if (out.length < 4) for (const w of q.split(' ').filter((x) => !x.includes(':'))) take(search(db, w, { now, limit: 6 }));
+  // Cards that contain the words come first: the whole query, then one word at a time, rarest word first so
+  // "moon" outranks "posts". The embedder only fills what is left, so a paraphrase still finds something but
+  // a vague neighbour never buries an exact match.
+  take(search(db, q, { now, limit: MAX_CARDS }));
+  const words = q.split(' ').filter((x) => !x.includes(':'));
+  if (words.length > 1) {
+    const perWord = words.map((w) => search(db, w, { now, limit: 6 })).filter((r) => r.length).sort((a, b) => a.length - b.length);
+    for (const r of perWord) take(r);
+  }
+  // An embedder that fails (model still loading, runtime error) must not take the answer down with it.
+  if (out.length < MAX_CARDS) { try { take(await hybrid(db, q, embedQuery, { now, limit: MAX_CARDS })); } catch { /* keyword hits stand */ } }
   return out;
 }
 
 const clip = (s: string | null | undefined, n: number) => (s ? s.replace(/\s+/g, ' ').trim().slice(0, n) : '');
 
-export function contextBlock(cards: Item[], tagsOf: (id: string) => string[]): string {
+export function contextBlock(cards: Item[], tagsOf: (id: string) => string[], maxChars = CONTEXT_CHARS): string {
   const blocks: string[] = [];
   let used = 0;
   cards.forEach((c, i) => {
-    const text = clip(c.body, CHARS_PER_CARD) || clip(c.summary, CHARS_PER_CARD);
-    const ocr = clip(c.ocr_text, 300);
+    // A small window (on-device) gets shorter excerpts so more than one card fits in it.
+    const per = Math.min(CHARS_PER_CARD, Math.max(160, Math.floor(maxChars / 8)));
+    const text = clip(c.body, per) || clip(c.summary, per);
+    const ocr = clip(c.ocr_text, Math.min(300, per));
     const lines = [
       `[${i + 1}] ${c.title ?? c.url ?? 'Untitled'}`,
       c.url ? `url: ${shortUrl(c.url, 80)}` : '',
@@ -71,7 +79,7 @@ export function contextBlock(cards: Item[], tagsOf: (id: string) => string[]): s
       ocr && ocr !== text ? `on image: ${ocr}` : '',
     ].filter(Boolean);
     const block = lines.join('\n');
-    if (used + block.length > CONTEXT_CHARS) return;
+    if (used + block.length > maxChars) return;
     used += block.length;
     blocks.push(block);
   });
@@ -94,6 +102,21 @@ export function unhedge(answer: string): string {
   return rest ? rest.charAt(0).toUpperCase() + rest.slice(1) : answer;
 }
 
+// A small model often recites the numbered cards before answering; those lines are the context, not an answer.
+export function stripEcho(answer: string, cards: Item[]): string {
+  const lines = answer.split('\n');
+  let i = 0;
+  const echo = (l: string) => {
+    const m = /^\s*\[?(\d{1,2})\]?[.:)]?\s*(.*)$/.exec(l);
+    if (!m) return false;
+    const t = (cards[Number(m[1]) - 1]?.title ?? '').toLowerCase();
+    return !!t && m[2]!.toLowerCase().startsWith(t.slice(0, 24));
+  };
+  while (i < lines.length && (echo(lines[i]!) || (i > 0 && !lines[i]!.trim()))) i++;
+  const rest = lines.slice(i).join('\n').trim();
+  return i > 0 && rest ? rest : answer;
+}
+
 export function askUser(question: string, context: string, history: AskTurn[] = []): string {
   const prior = history.slice(-6).map((t) => `${t.role === 'user' ? 'User' : 'Assistant'}: ${t.content}`).join('\n');
   return [context ? `Cards:\n\n${context}` : 'Cards: (none found)', prior ? `Earlier in this conversation:\n${prior}` : '', `Question: ${question}`].filter(Boolean).join('\n\n');
@@ -107,13 +130,15 @@ export function citations(answer: string, count: number): number[] {
 }
 
 export async function ask(
-  o: { db: Database; provider: Provider; embedQuery?: EmbedQuery; tagsOf: (id: string) => string[]; now?: number },
+  o: { db: Database; provider: Provider; embedQuery?: EmbedQuery; tagsOf: (id: string) => string[]; now?: number; contextChars?: number },
   question: string,
   history: AskTurn[] = [],
 ): Promise<AskResult> {
   const cards = await retrieve(o.db, question, o.embedQuery, o.now);
   if (!cards.length && !history.length) return { answer: NOTHING_FOUND, cards, cited: [], empty: true };
-  const raw = await o.provider.complete({ system: ASK_SYSTEM, user: askUser(question, contextBlock(cards, o.tagsOf), history), maxTokens: 600 });
-  const answer = unhedge(raw.trim());
+  // The card block gets what is left of the window after the instructions and a couple of earlier turns.
+  const budget = o.contextChars ? Math.max(600, o.contextChars - ASK_SYSTEM.length - 800) : CONTEXT_CHARS;
+  const raw = await o.provider.complete({ system: ASK_SYSTEM, user: askUser(question, contextBlock(cards, o.tagsOf, budget), history.slice(o.contextChars ? -2 : -6)), maxTokens: 600 });
+  const answer = unhedge(stripEcho(raw.trim(), cards));
   return { answer, cards, cited: citations(answer, cards.length), empty: answer.startsWith(NOTHING_FOUND.slice(0, 20)) };
 }

@@ -98,7 +98,13 @@ export function createOnDevice(): OnDeviceAI | undefined {
         const sys = `${system}${json ? '\nRespond with a single JSON value and nothing else.' : ''} /no_think`;
         m.configure({ chatConfig: { systemPrompt: sys }, generationConfig: { temperature: 0.2, topP: 0.9 } });
         // maxTokens is not a runtime knob in executorch 0.9; the classify prompt is short by design.
-        const raw = (await m.generate([{ role: 'system', content: sys }, { role: 'user', content: user }])).replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+        let raw: string;
+        try { raw = await m.generate([{ role: 'system', content: sys }, { role: 'user', content: user }]); }
+        catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          throw new Error(/generate/i.test(msg) ? `the on-device model could not answer (${user.length > (api.contextChars ?? 3200) ? 'the prompt is longer than its window' : 'it may still be busy'})` : msg);
+        }
+        raw = raw.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
         return json ? extractJson(raw) : raw;
       };
       const p = busy.then(run, run);
@@ -112,7 +118,17 @@ export function createOnDevice(): OnDeviceAI | undefined {
       return out;
     },
     async ready() {
-      try { await Promise.all([getLlm(), getEmb()]); api.loaded = true; lastError = undefined; return true; }
+      try {
+        const [m] = await Promise.all([getLlm(), getEmb()]);
+        api.loaded = true; lastError = undefined;
+        // The window is on the controller's native handle, not the public module; ~3.5 chars a token, and a
+        // third of it kept for the chat template, the reply and the tokeniser's worse days.
+        try {
+          const tokens = (m as unknown as { controller?: { nativeModule?: { getMaxContextLength?(): number } } }).controller?.nativeModule?.getMaxContextLength?.();
+          if (tokens && tokens > 0) api.contextChars = Math.floor(tokens * 3.5 * 0.66);
+        } catch { /* stays undefined: the caller falls back to a conservative budget */ }
+        return true;
+      }
       catch (e) {
         llm = emb = undefined;
         lastError = e instanceof Error ? e.message : String(e);

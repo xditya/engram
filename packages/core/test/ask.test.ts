@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { memoryDb } from './helpers/db';
 import type { Database } from '../src/platform';
 import type { Provider } from '../src/ai/types';
-import { ask, retrievalQuery, looksLikeQuestion, citations, contextBlock, unhedge, NOTHING_FOUND } from '../src/ai/ask';
+import { ask, retrievalQuery, looksLikeQuestion, citations, contextBlock, unhedge, stripEcho, NOTHING_FOUND } from '../src/ai/ask';
 
 const NOW = new Date(2026, 4, 25, 12).getTime();
 
@@ -78,6 +78,12 @@ describe('ask', () => {
     expect(r.cards.map((c) => c.id).sort()).toEqual(['b', 'c']);
   });
 
+  it('puts keyword matches ahead of the embedder, rarest word first', async () => {
+    const vague = async () => ({ vec: new Float32Array(8), model: 'x' });
+    const r = await ask({ db, provider: fakeProvider('Fonts [1].'), embedQuery: vague, tagsOf: tagsOf(db), now: NOW }, 'which cards are about fonts?');
+    expect(r.cards[0]?.id).toBe('b');
+  });
+
   it('falls back to text search when the embedder throws', async () => {
     const boom = async () => { throw new Error('forward pass failed'); };
     const r = await ask({ db, provider: fakeProvider('Fonts [1].'), embedQuery: boom, tagsOf: tagsOf(db), now: NOW }, 'which fonts did i save?');
@@ -97,6 +103,15 @@ describe('unhedge', () => {
     expect(unhedge("I couldn't find anything saved about that. The closest cards are [2] Lokesh Kanagaraj - Wikipedia.")).toBe('[2] Lokesh Kanagaraj - Wikipedia.');
     expect(unhedge("I couldn't find anything saved about that.")).toBe("I couldn't find anything saved about that.");
     expect(unhedge('One reel says so [1].')).toBe('One reel says so [1].');
+  });
+});
+
+describe('stripEcho', () => {
+  const cards = [{ id: 'a', title: 'Our Moon in Its Waning Crescent Phase' }, { id: 'b', title: '@nasaartemis on Instagram: Tonight, take a moment' }] as never;
+  it('drops a recited card list ahead of the answer, leaves a plain answer alone', () => {
+    expect(stripEcho('[1] Our Moon in Its Waning Crescent Phase\n[2] @nasaartemis on Instagram: Tonight, take a moment to look up\n\nThe posts about the moon are [1] and [2].', cards)).toBe('The posts about the moon are [1] and [2].');
+    expect(stripEcho('The posts are [1] and [2].', cards)).toBe('The posts are [1] and [2].');
+    expect(stripEcho('[1] Our Moon in Its Waning Crescent Phase', cards)).toBe('[1] Our Moon in Its Waning Crescent Phase');
   });
 });
 

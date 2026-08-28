@@ -6,6 +6,9 @@ import { engram, getSettings } from '../../lib/engram';
 export type AskStatus = 'idle' | 'thinking' | 'done' | 'error';
 export interface AskState { status: AskStatus; question: string; answer: string; cards: Item[]; cited: number[]; empty: boolean; error?: string }
 
+// Prompt budget for the small on-device model when the runtime does not report its window (~1k tokens).
+const ON_DEVICE_CHARS = 3200;
+
 const IDLE: AskState = { status: 'idle', question: '', answer: '', cards: [], cited: [], empty: false };
 
 // The chat provider from the Intelligence settings, or null when Ask is not available (mode off, key missing,
@@ -75,7 +78,7 @@ export const useAskStore = create<AskStore>((set, get) => ({
     try {
       if (p.onDevice && !e.platform.onDevice?.loaded && !(await e.platform.onDevice!.ready())) throw new Error('the on-device model is not ready');
       const r = await ai.ask(
-        { db: e.platform.db, provider: p.provider, embedQuery: embedQuery(), tagsOf: (id) => e.db.tags.of(id), now: e.platform.now() },
+        { db: e.platform.db, provider: p.provider, embedQuery: embedQuery(), tagsOf: (id) => e.db.tags.of(id), now: e.platform.now(), contextChars: p.onDevice ? e.platform.onDevice?.contextChars ?? ON_DEVICE_CHARS : undefined },
         q, get().turns,
       );
       if (my !== get().gen) return;
