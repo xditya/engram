@@ -4,3 +4,4 @@ export { enrichers, runEnrichers, guessTypeFromUrl } from './registry';
 export { youtubeId } from './sites';
 export { titleFromUrl, shortUrl } from './title';
 export { capHtml, MAX_HTML_BYTES } from './html';
+export { playable, type Playable } from './embed';

@@ -1,11 +1,13 @@
 import { ScrollView, View, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import * as WebBrowser from 'expo-web-browser';
-import type { FileRole, Item } from '@engram/core';
+import { extract, type FileRole, type Item } from '@engram/core';
 import { engram, useLiveQuery } from '../../lib/hub';
 import { useTheme } from '../../theme/useTheme';
-import { Button, Text } from '../../ui';
+import { useRouter } from 'expo-router';
+import { Button, Chip, Text } from '../../ui';
 import { metaOf, readingMinutes } from './format';
+import { Player } from './Player';
 
 export const openOriginal = (url: string | null) => { if (url) void WebBrowser.openBrowserAsync(url); };
 
@@ -80,7 +82,8 @@ function Quote({ item }: { item: Item }) {
 
 // link / product / video / pdf / everything else: preview, title, description, one Open.
 function Preview({ item }: { item: Item }) {
-  const { c, space } = useTheme();
+  const { space } = useTheme();
+  const router = useRouter();
   const { width } = useWindowDimensions();
   const poster = useFile(item, ['poster', 'thumb']);
   const meta = metaOf(item);
@@ -88,9 +91,14 @@ function Preview({ item }: { item: Item }) {
   const sub = [item.domain, item.type === 'video' && meta.duration, item.type === 'pdf' && meta.pages && `${meta.pages} pages`].filter(Boolean).join(' · ');
   return (
     <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
-      {poster ? <Image source={{ uri: poster.uri }} contentFit="cover" style={{ width, height: Math.min(width / ratio, 360), backgroundColor: c.surface2 }} /> : null}
+      {poster || (item.url && extract.playable(item.url)) ? <Player url={item.url ?? ''} poster={poster} width={width} height={Math.min(width / ratio, 360)} /> : null}
       <View style={{ padding: space[5], gap: space[3] }}>
         <Text size="xl" weight={600} accessibilityRole="header">{item.title ?? item.url}</Text>
+        {meta.handle ? (
+          <View style={{ flexDirection: 'row' }}>
+            <Chip label={`@${meta.handle}`} mono />
+          </View>
+        ) : null}
         {sub ? <Text size="xs" mono color="text3">{sub}</Text> : null}
         {item.type === 'product' && meta.price ? (
           <View>
