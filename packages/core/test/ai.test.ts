@@ -62,7 +62,7 @@ describe('providers', () => {
     const { fetch, calls } = fakeFetch((c) => {
       if (c.url.endsWith('/models')) return { data: [{ id: 'm1' }] };
       if (c.url.endsWith('/embeddings')) return { data: [{ index: 1, embedding: [2, 2] }, { index: 0, embedding: [1, 1] }] };
-      return { choices: [{ message: { content: '{"type":"link","tags":["x"]}' } }] };
+      return { choices: [{ message: { content: '{"type":"link","tags":["xylophone"]}' } }] };
     });
     const p = openaiCompatible({ id: 'openai', apiKey: 'o', fetch });
     await classify(p, item(), { summaries: false });
@@ -108,8 +108,8 @@ describe('providers', () => {
     expect(s).toContain('"Pain" -> boulangerie');
     expect(s).toContain('summary');
     const od: Provider = { id: 'on-device', capabilities: () => ({ chat: true, embed: true, vision: false, summaries: false }), test: async () => ({ ok: true }),
-      complete: async (r) => { expect(r.system).not.toContain('summary'); return '{"type":"link","tags":["a"],"summary":"ignored"}'; } };
-    expect(await classify(od, item())).toEqual({ tags: ['a'] });
+      complete: async (r) => { expect(r.system).not.toContain('summary'); return '{"type":"link","tags":["astronomy"],"summary":"ignored"}'; } };
+    expect(await classify(od, item())).toEqual({ tags: ['astronomy'] });
   });
 });
 

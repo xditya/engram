@@ -1,4 +1,5 @@
 import type { Item, ItemType } from '../../model/types';
+import { isTag } from '../../db/autotag';
 import type { Provider } from '../types';
 import { classifyPrompt, classifyUser, type Correction, ITEM_TYPES } from '../prompts';
 
@@ -20,8 +21,10 @@ export function weakTitle(item: Pick<Item, 'title' | 'domain' | 'body'>): boolea
 
 export function cleanTags(tags: unknown): string[] {
   if (!Array.isArray(tags)) return [];
-  const clean = tags.filter((t): t is string => typeof t === 'string').map((t) => t.trim().toLowerCase().replace(/^#/, '')).filter(Boolean);
-  return [...new Set(clean)].slice(0, 8);
+  const clean = tags.filter((t): t is string => typeof t === 'string')
+    .map((t) => t.trim().toLowerCase().replace(/^#/, '').replace(/\s+/g, ' '))
+    .filter(isTag);
+  return [...new Set(clean)].slice(0, 6);
 }
 
 export async function classify(provider: Provider, item: Item, opts: { instructions?: string; corrections?: Correction[]; summaries?: boolean } = {}): Promise<ClassifyPatch> {

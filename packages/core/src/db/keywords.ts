@@ -1,5 +1,7 @@
 // No-model tags: the handful of terms a card is obviously "about" — proper nouns from the title and words that
 // repeat in the body/OCR text — plus the site it came from. Conservative on purpose; a model does the rest.
+import { isTag } from './autotag';
+
 const STOP = new Set(('a an the and or but if then else of in on at to for from by with without about as into onto over under ' +
   'is are was were be been being am do does did done have has had having can could may might must shall should will would ' +
   'this that these those it its itself they them their there here where when why how what which who whom whose ' +
@@ -22,7 +24,7 @@ export function extractKeywords(title: string | null | undefined, text: string |
   for (const w of body) counts.set(w, (counts.get(w) ?? 0) + 1);
   for (const [w, n] of counts) if (n >= 2) out.set(w, (out.get(w) ?? 0) + n);
   for (const w of words(title ?? '')) out.set(w, (out.get(w) ?? 0) + 2);
-  const ranked = [...out.entries()].filter(([k]) => k.length <= 32).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([k]) => k);
+  const ranked = [...out.entries()].filter(([k]) => k.length <= 32 && isTag(k)).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([k]) => k);
   // A phrase ("example domain") absorbs its own words so the list doesn't say the same thing three times.
   const phrases = ranked.filter((k) => k.includes(' ')).slice(0, max);
   return ranked.filter((k) => k.includes(' ') || !phrases.some((p) => p.split(' ').includes(k))).slice(0, max);

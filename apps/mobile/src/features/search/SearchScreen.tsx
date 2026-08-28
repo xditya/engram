@@ -60,7 +60,8 @@ export function SearchScreen() {
   // A finished operator (`type:pdf `) becomes a chip as soon as the space after it is typed.
   const onChange = (t: string) => {
     const last = core.tokenize(t).at(-1);
-    if (t.endsWith(' ') && last?.kind === 'op') { setChips((cs) => [...cs, last.raw]); setText(''); } else setText(t);
+    // Only the finished operator leaves the field; any plain words typed alongside it stay where they were.
+    if (t.endsWith(' ') && last?.kind === 'op') { setChips((cs) => [...cs, last.raw]); setText(t.slice(0, t.lastIndexOf(last.raw)).trim()); } else setText(t);
   };
   const commit = () => { if (query) recent.add(query); };
 

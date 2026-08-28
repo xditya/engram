@@ -62,7 +62,12 @@ export function startBackfill(e: Engram, all = false): number {
   const ids = e.platform.db.query<{ id: string }>(
     `SELECT id FROM items WHERE ${all ? 'deleted_at IS NULL' : UNTAGGED} AND id NOT IN (SELECT item_id FROM jobs WHERE kind = 'classify' AND status IN ('pending','running'))`,
   );
-  for (const { id } of ids) e.queue.enqueueFor(id, ['classify', 'embed']);
+  if (all) {
+    // Tags the machine wrote are replaced, not stacked; the ones the person typed stay.
+    const old = e.platform.db.query<{ item_id: string; tag: string }>("SELECT item_id, tag FROM tags WHERE source = 'ai' AND deleted_at IS NULL");
+    e.db.transaction(() => { for (const t of old) e.db.tags.remove(t.item_id, t.tag); });
+  }
+  for (const { id } of ids) e.queue.enqueueFor(id, ['classify', 'autotag', 'embed']);
   void e.drain();
   return ids.length;
 }

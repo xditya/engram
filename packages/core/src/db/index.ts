@@ -258,5 +258,5 @@ export function createDb(
   return { items, tags, spaces, files, jobs, applyRemoteOp, reapplyDeferred, orphan, isCreate, hlc, transaction: tx };
 }
 
-export { matchTags, autotagText } from './autotag';
+export { matchTags, autotagText, isTag } from './autotag';
 export { extractKeywords, siteTag } from './keywords';
