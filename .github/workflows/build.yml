@@ -381,5 +381,8 @@ jobs:
             fi
           fi
 
+          # Assets carry the version: engram-1.7-android.apk, engram-1.7-ios-unsigned.ipa.
+          for f in dist/engram-*; do mv "$f" "${f/engram-/engram-$TAG-}"; done
+          ls dist
           gh release upload "$TAG" dist/* --clobber
           echo "Published $(gh release view "$TAG" --json url --jq .url)"

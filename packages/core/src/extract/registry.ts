@@ -32,7 +32,8 @@ function merge(base: Enriched, over: Enriched): Enriched {
   return out as Enriched;
 }
 
-const BARE_TITLE = /^(instagram|reddit|threads|threads • log in|linkedin|facebook|pinterest|spotify – web player|redirecting\.\.\.|log ?in|error|untitled)$/i;
+// Notion titles every public page with its own tagline ("Notion – The all-in-one workspace…"); the page name only lives in the url slug.
+const BARE_TITLE = /^(instagram|reddit|threads|threads • log in|linkedin|facebook|pinterest|spotify – web player|redirecting\.\.\.|log ?in|error|untitled|notion(\s*[–-].*)?)$/i;
 
 export async function runEnrichers(url: string, opts: { html?: string; platform: Platform }): Promise<Enriched> {
   const u = new URL(url);

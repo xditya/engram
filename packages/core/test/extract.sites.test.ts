@@ -92,6 +92,7 @@ describe('titleFromUrl ids', () => {
   it('drops trailing id tokens', () => {
     expect(titleFromUrl('https://giphy.com/gifs/cat-3o7TKSjRrfIPjeiVyM')).toBe('Cat');
     expect(titleFromUrl('https://example.com/blog/my-great-post-12345')).toBe('My great post');
+    expect(titleFromUrl('https://xditya.notion.site/Launch-plan-1a2b3c4d5e6f7890abcdef1234567890')).toBe('Launch plan');
   });
 });
 
@@ -122,5 +123,14 @@ describe('shortUrl', () => {
     expect(shortUrl('https://www.instagram.com/p/DcOX3hWFiey/')).toBe('instagram.com/p/DcOX3hWFiey');
     expect(shortUrl('https://example.com/' + 'x'.repeat(60))).toHaveLength(40);
     expect(shortUrl('https://example.com/' + 'x'.repeat(60)).endsWith('…')).toBe(true);
+  });
+});
+
+describe('notion', () => {
+  it('replaces the site tagline with the page name from the url slug', async () => {
+    const html = '<html><head><title>Notion – The all-in-one workspace for your notes, tasks, wikis, and databases.</title><meta property="og:title" content="Notion – The all-in-one workspace for your notes, tasks, wikis, and databases." /></head><body></body></html>';
+    const { platform } = fakePlatform({ 'https://xditya.notion.site/': html });
+    const r = await runEnrichers('https://xditya.notion.site/Launch-plan-1a2b3c4d5e6f7890abcdef1234567890', { platform });
+    expect(r.title).toBe('Launch plan');
   });
 });
