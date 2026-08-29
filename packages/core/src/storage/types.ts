@@ -7,4 +7,6 @@ export interface StorageAdapter {
   // ifMatch is advisory: iCloud has no ETag and the manifest is always rebuildable from ops/.
   putManifest(bytes: Uint8Array, ifMatch: string | null): Promise<{ etag: string } | 'conflict'>;
   getManifest(): Promise<{ bytes: Uint8Array; etag: string } | null>;
+  // Leaves the store looking untouched, for someone deleting their data from it.
+  deleteManifest(): Promise<void>;
 }

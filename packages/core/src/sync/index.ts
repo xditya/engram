@@ -4,4 +4,5 @@ export type { SyncEngine, SyncOpts, BlobPolicy, Cursors } from './SyncEngine';
 export { gc, TRASH_MS, HISTORY_MS } from './gc';
 export type { GcResult } from './gc';
 export { importInbox, normalizeUrl } from './inbox';
+export { wipeRemote } from './wipe';
 export type { InboxItem } from './inbox';

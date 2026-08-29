@@ -69,6 +69,7 @@ export function createICloudAdapter(): StorageAdapter {
       try { await cloud.uploadFile(MANIFEST, f.uri, { mimeType: 'application/octet-stream' }); } finally { f.delete(); }
       return { etag: await mtime(MANIFEST) };
     },
+    async deleteManifest() { if (await cloud.exists(MANIFEST)) await cloud.unlink(MANIFEST); },
     async getManifest() {
       const bytes = await get(MANIFEST);
       return bytes ? { bytes, etag: await mtime(MANIFEST) } : null;

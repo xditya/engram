@@ -6,6 +6,8 @@ import { repairPreviews } from '../../src/lib/previews';
 import { DEFAULTS } from '../../src/lib/settings';
 import { useEngram, useSettings, useToast } from '../../src/lib/engram';
 import { backfill, costLine, modelOf, startBackfill } from '../../src/features/settings/intelligence';
+import { BACKEND_NAME } from '../../src/features/sync/lib';
+import { sync as coreSync } from '@engram/core';
 import { Field, Group, Page, n } from '../../src/features/settings/ui';
 import { Row, Text } from '../../src/ui';
 
@@ -38,21 +40,91 @@ export default function Advanced() {
     show(`Rebuilding ${n(ids.length)} ${ids.length === 1 ? 'thumbnail' : 'thumbnails'} from your photos and videos`);
   };
 
+  const wipeLocal = async () => {
+    if (!engram) return;
+    const sql = engram.platform.db;
+    for (const t of ['items', 'files', 'tags', 'spaces', 'space_items', 'jobs', 'ops', 'cell_clock', 'cell_history', 'blob_index', 'sync_cursor', 'sync_errors', 'items_fts']) sql.exec(`DELETE FROM ${t}`);
+    await engram.secrets.set('apiKey', null);
+    await engram.secrets.set('webdavPassword', null);
+    await engram.sync.masterKey.clear();
+    useSettings.getState().update({ ...DEFAULTS, onboarded: true });
+    engram.events.emit();
+  };
+
   const reset = () => Alert.alert('Reset engram on this device', 'Removes every card, file, key and setting from this phone. Other devices and your sync storage are not touched.', [
     { text: 'Cancel', style: 'cancel' },
     { text: 'Reset', style: 'destructive', onPress: async () => {
-      if (!engram) return;
-      const sql = engram.platform.db;
-      for (const t of ['items', 'files', 'tags', 'spaces', 'space_items', 'jobs', 'ops', 'cell_clock', 'cell_history', 'blob_index', 'sync_cursor', 'sync_errors', 'items_fts']) sql.exec(`DELETE FROM ${t}`);
-      await engram.secrets.set('apiKey', null);
-      await engram.secrets.set('webdavPassword', null);
-      await engram.sync.masterKey.clear();
-      useSettings.getState().update({ ...DEFAULTS, onboarded: true });
-      engram.events.emit();
+      await wipeLocal();
       show('Reset');
       goHome();
     } },
   ]);
+
+  // Sync bookkeeping describes a store that no longer exists; drop it so turning sync on again starts clean.
+  const forgetStore = () => {
+    if (!engram) return;
+    const sql = engram.platform.db;
+    engram.db.transaction(() => {
+      sql.exec('DELETE FROM sync_cursor');
+      sql.exec('DELETE FROM sync_errors');
+      sql.exec("DELETE FROM blob_index WHERE state = 'remote'");
+      sql.exec('UPDATE ops SET pushed = 0');
+    });
+  };
+
+  const backendName = BACKEND_NAME[s.sync.backend];
+  const wipeRemote = async () => {
+    const st = await engram!.sync.getStorage();
+    if (!st) throw new Error(`${backendName} is not connected on this phone`);
+    return coreSync.wipeRemote(st);
+  };
+
+  const deleteRemote = () => {
+    if (!engram || s.sync.backend === 'off') { show('Sync is off on this phone'); return; }
+    Alert.alert(
+      `Delete your library from ${backendName}`,
+      `Every card, file and key engram put in ${backendName} goes, and this phone stops syncing. What is on this phone stays. Files another device saved that this one never downloaded cannot be recovered.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => void (async () => {
+          try {
+            show(`Deleting from ${backendName}…`);
+            const gone = await wipeRemote();
+            s.patch('sync', { backend: 'off' });
+            forgetStore();
+            engram.sync.reset();
+            engram.events.emit();
+            show(`Deleted ${n(gone)} ${gone === 1 ? 'file' : 'files'} from ${backendName}`);
+          } catch (e) {
+            show(`Couldn't finish: ${e instanceof Error ? e.message : String(e)}`);
+          }
+        })() },
+      ],
+    );
+  };
+
+  const deleteEverything = () => {
+    if (!engram) return;
+    Alert.alert(
+      'Delete everything',
+      `Empties ${backendName} and this phone: every card, file, key and setting, in both places. Other devices keep what they have already downloaded until they sync.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => void (async () => {
+          try {
+            show(`Deleting from ${backendName}…`);
+            await wipeRemote();
+          } catch (e) {
+            show(`Couldn't empty ${backendName}: ${e instanceof Error ? e.message : String(e)}. Nothing was deleted here.`);
+            return;
+          }
+          await wipeLocal();
+          show('Deleted');
+          goHome();
+        })() },
+      ],
+    );
+  };
 
   return (
     <Page title="Advanced">
@@ -72,7 +144,9 @@ export default function Advanced() {
         <Row title="Share diagnostics" subtitle="What the share sheet hand-off sees on this device" onPress={() => router.push('/settings/share-diagnostics' as never)} />
       </Group>
       <Group label="Danger">
-        <Row title="Reset engram on this device" onPress={reset} />
+        {s.sync.backend === 'off' ? null : <Row title={`Delete the copy in ${backendName}`} subtitle="Empties the sync store and turns sync off here. This phone keeps its library." onPress={deleteRemote} />}
+        <Row title="Reset engram on this device" subtitle={s.sync.backend === 'off' ? undefined : `Leaves the copy in ${backendName} alone`} onPress={reset} />
+        {s.sync.backend === 'off' ? null : <Row title="Delete everything" subtitle={`This phone and ${backendName}, both`} onPress={deleteEverything} />}
       </Group>
       <Text size="xs" color="text3">Nothing here phones home. Every action runs on this device only.</Text>
     </Page>

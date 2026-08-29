@@ -87,6 +87,10 @@ export function createWebDavAdapter(opts: WebDavOpts): StorageAdapter {
       if (!r.ok) throw new Error(`webdav: PUT manifest -> ${r.status}`);
       return { etag: await etagOf(r, MANIFEST) };
     },
+    async deleteManifest() {
+      const r = await req('DELETE', MANIFEST);
+      if (!r.ok && r.status !== 404) throw new Error(`webdav: DELETE manifest -> ${r.status}`);
+    },
     async getManifest() {
       const r = await req('GET', MANIFEST);
       if (r.status === 404) return null;

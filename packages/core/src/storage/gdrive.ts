@@ -105,6 +105,12 @@ export function createGDriveAdapter(opts: GDriveOpts): StorageAdapter {
       if (!r.ok) throw new Error(`gdrive: update manifest -> ${r.status}`);
       return { etag: r.headers.get('etag') ?? '' };
     },
+    async deleteManifest() {
+      const file = await find(MANIFEST);
+      if (!file) return;
+      const r = await req(`${API}/${file.id}`, { method: 'DELETE' });
+      if (!r.ok && r.status !== 404) throw new Error(`gdrive: delete manifest -> ${r.status}`);
+    },
     async getManifest() {
       const file = await find(MANIFEST);
       if (!file) return null;

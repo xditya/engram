@@ -48,6 +48,7 @@ export function createMemoryAdapter(store: SharedStore = createSharedStore(), op
       store.manifest = { bytes: bytes.slice(), etag };
       return { etag };
     },
+    async deleteManifest() { store.manifest = null; },
     async getManifest() {
       return store.manifest ? { bytes: store.manifest.bytes.slice(), etag: store.manifest.etag } : null;
     },
