@@ -52,7 +52,7 @@ export default function Intelligence() {
       <Card
         title="On this device"
         badge={onDeviceTier() === 'recommended' && !onDeviceReason ? 'Recommended' : 'Experimental'}
-        body={onDeviceReason ? `May be slow on this phone. ${onDeviceReason}` : 'Private and free. Tags and visual search; summaries are off by default. Downloads a model once (~1 GB, Wi-Fi only).'}
+        body={onDeviceReason ? `May be slow on this phone. ${onDeviceReason}` : 'Private and free. Tags and visual search; summaries are off by default. Downloads a model once (~1 GB, best on Wi-Fi).'}
         disabled={!!onDeviceReason}
         selected={mode === 'on-device'}
         onPress={() => setMode('on-device')}

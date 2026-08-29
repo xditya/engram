@@ -69,11 +69,12 @@ export async function createEngram(): Promise<Engram> {
     }
   })();
 
-  // Load the on-device model (downloading it on first use) only on Wi-Fi; jobs skip until it is loaded.
-  const loadOnDevice = async () => {
+  // Load the on-device model, downloading it on first use; jobs skip until it is loaded. Attempts we make on our
+  // own (boot, a network change) wait for Wi-Fi, but someone who just turned the mode on is asking for it now.
+  const loadOnDevice = async (chosen = false) => {
     const od = platform.onDevice;
     if (!od || od.loaded || getSettings().intelligence.mode !== 'on-device' || RN.OS === 'web') return;
-    if ((await Network.getNetworkStateAsync().catch(() => null))?.type !== Network.NetworkStateType.WIFI) return;
+    if (!chosen && (await Network.getNetworkStateAsync().catch(() => null))?.type !== Network.NetworkStateType.WIFI) return;
     if (await od.ready()) { queue.reenqueueSkipped(); void drain(); }
   };
 
@@ -88,7 +89,7 @@ export async function createEngram(): Promise<Engram> {
   platform.net.onChange((online) => { if (!online) return; void drain(); void loadOnDevice(); if (syncOn()) void sync.syncNow(); });
   AppState.addEventListener('change', (s) => { if (s === 'active') { void drain(); if (syncOn()) void sync.syncNow(); } });
   useSettings.subscribe((s, prev) => { if (s.sync !== prev.sync) { sync.reset(); if (s.sync.backend !== 'off') void sync.syncNow(); } });
-  useSettings.subscribe((s, prev) => { if (s.intelligence.mode !== prev.intelligence.mode) void loadOnDevice(); });
+  useSettings.subscribe((s, prev) => { if (s.intelligence.mode !== prev.intelligence.mode) void loadOnDevice(s.intelligence.mode === 'on-device'); });
   void sync.registerBackground();
   // Cards that never got a tag (saved before tagging existed, or whose run found nothing) get one more pass each boot.
   for (const { id } of platform.db.query<{ id: string }>(

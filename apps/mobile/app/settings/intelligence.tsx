@@ -121,7 +121,7 @@ export default function Intelligence() {
           title="On this device"
           badge={offered && onDeviceTier() === 'recommended' ? 'Recommended' : 'Experimental'}
           body={offered
-            ? `Private and free. Tags and visual search; summaries are off by default. Downloads a model once (${MODEL_SIZE}, Wi-Fi only).${onDeviceTier() === 'experimental' ? ' May be slow on this phone.' : ''}`
+            ? `Private and free. Tags and visual search; summaries are off by default. Downloads a model once (${MODEL_SIZE}, best on Wi-Fi).${onDeviceTier() === 'experimental' ? ' May be slow on this phone.' : ''}`
             : `Private and free. Tags and visual search. ${engram?.onDeviceReason ?? 'Not available on this phone.'}`}
           selected={s.mode === 'on-device'}
           expanded={!!dl}
