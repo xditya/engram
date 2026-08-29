@@ -1,4 +1,3 @@
-import { Platform as RN } from 'react-native';
 import { crypto, sync as coreSync, type Manifest, type SyncEngine } from '@engram/core';
 import { wordlist } from '@scure/bip39/wordlists/english';
 import type { Engram } from '../../lib/engram';
@@ -25,10 +24,6 @@ export const phraseSaved = {
   get: (e: Engram) => e.platform.keys.get(SAVED),
   set: (e: Engram, how: string) => e.platform.keys.set(SAVED, `${how}|${Date.now()}`),
 };
-
-// Fresh device: the recovery phrase lives in the password manager.
-export const KEYCHAIN = { service: 'app.engram.recovery', user: 'engram recovery phrase' };
-export const passwordManagerName = () => (RN.OS === 'ios' ? 'iCloud Keychain' : 'Google Password Manager');
 
 export const deviceIcon = (name: string) => {
   const n = name.toLowerCase();
