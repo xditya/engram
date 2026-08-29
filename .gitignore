@@ -11,3 +11,13 @@ coverage/
 .DS_Store
 apps/mobile/modules/*/android/build/
 .gradle/
+
+# argent: MCP config, skills and per-editor rules, installed locally by `argent init`
+.agents/
+.claude/
+.codex/
+.cursor/
+.gemini/
+.vscode/
+.mcp.json
+skills-lock.json
