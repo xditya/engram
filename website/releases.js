@@ -2,7 +2,7 @@
 // Unauthenticated calls are limited to 60 an hour per address; the response is cached in sessionStorage.
 (function () {
   var REPO = 'xditya/engram';
-  var API = 'https://api.github.com/repos/' + REPO + '/releases?per_page=20';
+  var API = 'https://api.github.com/repos/' + REPO + '/releases?per_page=100';
   var PAGE = 'https://github.com/' + REPO + '/releases';
   var latest = document.getElementById('latest');
   var history = document.getElementById('history-list');
@@ -84,6 +84,23 @@
     }).join('');
   };
 
+  // Every asset GitHub reports, CI builds included; .aab counts as Android, which barely anyone downloads.
+  var renderTotals = function (rs) {
+    var el = document.getElementById('totals'), t = { all: 0, android: 0, ios: 0 };
+    if (!el) return;
+    rs.forEach(function (r) {
+      r.assets.forEach(function (a) {
+        var cls = platform(a).cls, n = a.download_count || 0;
+        t.all += n;
+        if (cls === 'android' || cls === 'ios') t[cls] += n;
+      });
+    });
+    if (!t.all) return;
+    var n = function (x) { return x.toLocaleString(); };
+    el.textContent = n(t.all) + ' downloads · ' + n(t.android) + ' Android · ' + n(t.ios) + ' iPhone';
+    el.hidden = false;
+  };
+
   var fail = function () {
     latest.innerHTML = '<p class="rel-empty">Couldn\'t reach GitHub just now. <a href="' + PAGE + '">Open the releases page →</a></p>';
     document.getElementById('history').hidden = true;
@@ -93,6 +110,7 @@
     var rs = all.filter(function (r) { return !r.draft; });
     if (!rs.length) { fail(); return; }
     // A proper tagged release outranks the CI builds that follow it only when it is newer than them.
+    renderTotals(rs);
     renderLatest(rs[0]);
     renderHistory(rs.slice(1));
   };
