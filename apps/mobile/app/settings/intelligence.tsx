@@ -17,9 +17,11 @@ const SEGMENTS: { id: Seg; label: string }[] = [
   { id: 'openrouter', label: 'OpenRouter' }, { id: 'custom', label: 'Custom endpoint' },
 ];
 const PRESETS: { id: KeyProvider; label: string }[] = [
-  { id: 'ollama', label: 'Ollama' }, { id: 'lmstudio', label: 'LM Studio' }, { id: 'groq', label: 'Groq' }, { id: 'mistral', label: 'Mistral' },
+  { id: 'ollama', label: 'Ollama' }, { id: 'lmstudio', label: 'LM Studio' }, { id: 'groq', label: 'Groq' },
+  { id: 'mistral', label: 'Mistral' }, { id: 'nvidia', label: 'NVIDIA' },
 ];
 const segOf = (p?: KeyProvider): Seg => (p === 'anthropic' || p === 'openai' || p === 'gemini' || p === 'openrouter' ? p : 'custom');
+const NO_EMBEDDINGS: Record<string, string> = { anthropic: 'Anthropic', openrouter: 'OpenRouter', groq: 'Groq' };
 const MODEL_SIZE = '≈ 600 MB';
 
 export default function Intelligence() {
@@ -55,6 +57,7 @@ export default function Intelligence() {
 
   // Bring a key
   const seg = segOf(s.provider);
+  const noEmbeddings = NO_EMBEDDINGS[s.provider ?? ''];
   const [key, setKey] = useState('');
   const [check, setCheck] = useState<Check>({ state: 'idle' });
   const [help, setHelp] = useState(false);
@@ -170,9 +173,9 @@ export default function Intelligence() {
         {adv ? (
           <View style={{ gap: space[3] }}>
             <Field label="Chat model" placeholder={modelOf({ ...s, chatModel: undefined }) || 'default'} value={models.chat} onChangeText={(t) => setModels({ ...models, chat: t })} onBlur={commitAdvanced} />
-            <Field label="Embedding model" placeholder={seg === 'anthropic' ? 'none (Anthropic has no embeddings)' : 'default'} value={models.embed} onChangeText={(t) => setModels({ ...models, embed: t })} onBlur={commitAdvanced} />
+            <Field label="Embedding model" placeholder={noEmbeddings ? `none (${noEmbeddings} has no embeddings)` : 'default'} value={models.embed} onChangeText={(t) => setModels({ ...models, embed: t })} onBlur={commitAdvanced} />
             {seg !== 'custom' && seg !== 'anthropic' && seg !== 'gemini' ? <Field label="Base URL" placeholder={hostOf({ ...s, baseUrl: undefined })} keyboardType="url" value={models.base} onChangeText={(t) => setModels({ ...models, base: t })} onBlur={commitAdvanced} /> : null}
-            {seg === 'anthropic' ? <ToggleRow title="Visual search on this device" subtitle="Anthropic has no embeddings; use the on-device embedder." value={s.embedProvider === 'on-device'} onChange={(v) => set({ embedProvider: v ? 'on-device' : 'same' })} disabled={!offered} /> : null}
+            {noEmbeddings ? <ToggleRow title="Visual search on this device" subtitle={`${noEmbeddings} has no embeddings; use the on-device embedder.`} value={s.embedProvider === 'on-device'} onChange={(v) => set({ embedProvider: v ? 'on-device' : 'same' })} disabled={!offered} /> : null}
           </View>
         ) : null}
         {seg !== 'custom' ? <Text size="xs" color="text3">Typical use costs a few cents a month, billed by the provider, never by engram.</Text> : null}

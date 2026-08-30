@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { PRESETS, createProvider } from '../src/ai/providers';
 import { memoryDb } from './helpers/db';
 import type { Item, IntelligenceSettings, Job } from '../src/model/types';
 import {
@@ -262,5 +263,32 @@ describe('weakTitle', () => {
     const p = anthropic({ apiKey: 'k', fetch });
     expect((await classify(p, item({ title: 'IMG_1.jpg', domain: null }))).title).toBe('Trip packing list');
     expect((await classify(p, item())).title).toBeUndefined();
+  });
+});
+
+describe('presets', () => {
+  it('offers embeddings only where the provider actually has them', () => {
+    // OpenRouter proxies chat; POST /embeddings hits a dashboard route that answers 401, which reads as a bad key.
+    expect(PRESETS.openrouter.embedModel).toBeUndefined();
+    expect(PRESETS.groq.embedModel).toBeUndefined();
+    expect(PRESETS.nvidia.embedModel).toBe('nvidia/nemotron-3-embed-1b');
+  });
+
+  it('builds an nvidia provider that can chat and embed', () => {
+    const p = createProvider({ mode: 'key', provider: 'nvidia', summaries: true }, { apiKey: 'nvapi-x' }, { fetch: (async () => ({ ok: true, status: 200, text: async () => '{}' })) as never });
+    expect(p?.id).toBe('nvidia');
+    expect(p?.capabilities()).toMatchObject({ chat: true, embed: true });
+  });
+
+  it('sends the key as a bearer token to the nvidia endpoint', async () => {
+    const seen: { url: string; headers: Record<string, string> }[] = [];
+    const fetch = (async (url: string, init: { headers: Record<string, string> }) => {
+      seen.push({ url, headers: init.headers });
+      return { ok: true, status: 200, text: async () => JSON.stringify({ choices: [{ message: { content: 'hi' } }] }) };
+    }) as never;
+    const p = createProvider({ mode: 'key', provider: 'nvidia', summaries: true }, { apiKey: 'nvapi-x' }, { fetch })!;
+    await p.complete({ system: 's', user: 'u' });
+    expect(seen[0]!.url).toBe('https://integrate.api.nvidia.com/v1/chat/completions');
+    expect(seen[0]!.headers.authorization).toBe('Bearer nvapi-x');
   });
 });

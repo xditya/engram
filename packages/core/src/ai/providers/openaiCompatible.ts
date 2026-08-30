@@ -6,11 +6,17 @@ export interface Preset { baseUrl: string; chatModel: string; embedModel?: strin
 
 export const PRESETS: Record<PresetId, Preset> = {
   openai: { baseUrl: 'https://api.openai.com/v1', chatModel: 'gpt-4o-mini', embedModel: 'text-embedding-3-small', lan: false, needsKey: true, jsonMode: true },
-  openrouter: { baseUrl: 'https://openrouter.ai/api/v1', chatModel: 'openai/gpt-4o-mini', embedModel: 'openai/text-embedding-3-small', lan: false, needsKey: true, jsonMode: true },
+  // OpenRouter has no embeddings endpoint: POST /embeddings lands on a dashboard route that answers 401
+  // "No cookie auth credentials found", which looks like a rejected key. Chat only, so semantic search and Ask
+  // fall back to keywords unless the on-device embedder is turned on.
+  openrouter: { baseUrl: 'https://openrouter.ai/api/v1', chatModel: 'openai/gpt-4o-mini', lan: false, needsKey: true, jsonMode: true },
   ollama: { baseUrl: 'http://localhost:11434/v1', chatModel: 'llama3.2', embedModel: 'nomic-embed-text', lan: true, needsKey: false, jsonMode: true },
   lmstudio: { baseUrl: 'http://localhost:1234/v1', chatModel: 'local-model', embedModel: 'text-embedding-nomic-embed-text-v1.5', lan: true, needsKey: false, jsonMode: false },
   groq: { baseUrl: 'https://api.groq.com/openai/v1', chatModel: 'llama-3.1-8b-instant', lan: false, needsKey: true, jsonMode: true },
   mistral: { baseUrl: 'https://api.mistral.ai/v1', chatModel: 'mistral-small-latest', embedModel: 'mistral-embed', lan: false, needsKey: true, jsonMode: true },
+  // NVIDIA's hosted catalogue (build.nvidia.com), OpenAI-shaped. The big reasoning models are slow enough that
+  // a tagging pass takes minutes per card; the model is editable, so pick a small one for that.
+  nvidia: { baseUrl: 'https://integrate.api.nvidia.com/v1', chatModel: 'moonshotai/kimi-k3', embedModel: 'nvidia/nemotron-3-embed-1b', lan: false, needsKey: true, jsonMode: true },
   custom: { baseUrl: '', chatModel: '', lan: true, needsKey: false, jsonMode: false },
 };
 
