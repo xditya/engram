@@ -1,6 +1,6 @@
 export type ProviderId =
   | 'anthropic' | 'gemini' | 'openai' | 'openrouter' | 'ollama' | 'lmstudio'
-  | 'groq' | 'mistral' | 'custom' | 'on-device';
+  | 'groq' | 'mistral' | 'nvidia' | 'custom' | 'on-device';
 
 export interface Provider {
   id: ProviderId;

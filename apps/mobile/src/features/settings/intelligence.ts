@@ -13,6 +13,7 @@ export const KEY_PAGES: Record<string, { name: string; url: string }> = {
   openrouter: { name: 'OpenRouter', url: 'https://openrouter.ai/keys' },
   groq: { name: 'Groq', url: 'https://console.groq.com/keys' },
   mistral: { name: 'Mistral', url: 'https://console.mistral.ai/api-keys' },
+  nvidia: { name: 'NVIDIA', url: 'https://build.nvidia.com' },
 };
 const DEFAULT_MODEL: Record<string, string> = { anthropic: 'claude-haiku-4-5', gemini: 'gemini-3.6-flash' };
 

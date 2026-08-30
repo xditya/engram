@@ -80,7 +80,7 @@ export interface Job {
 
 export interface IntelligenceSettings {
   mode: 'on-device' | 'key' | 'off';
-  provider?: 'anthropic' | 'gemini' | 'openai' | 'openrouter' | 'ollama' | 'lmstudio' | 'groq' | 'mistral' | 'custom';
+  provider?: 'anthropic' | 'gemini' | 'openai' | 'openrouter' | 'ollama' | 'lmstudio' | 'groq' | 'mistral' | 'nvidia' | 'custom';
   baseUrl?: string; // openaiCompatible only
   chatModel?: string;
   embedModel?: string;
