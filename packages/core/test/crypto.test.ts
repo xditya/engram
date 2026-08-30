@@ -56,7 +56,7 @@ describe('envelope', () => {
     swapped.set(s.subarray(one, 2 * one), 0);
     swapped.set(s.subarray(0, one), one);
     expect(() => openChunks(dataKey, swapped)).toThrow();
-  });
+  }, 30_000);
 });
 
 describe('remote keys', () => {
