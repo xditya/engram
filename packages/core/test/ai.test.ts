@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PRESETS, createProvider } from '../src/ai/providers';
+import { PRESETS } from '../src/ai/providers';
 import { memoryDb } from './helpers/db';
 import type { Item, IntelligenceSettings, Job } from '../src/model/types';
 import {
@@ -275,7 +275,7 @@ describe('presets', () => {
   });
 
   it('builds an nvidia provider that can chat and embed', () => {
-    const p = createProvider({ mode: 'key', provider: 'nvidia', summaries: true }, { apiKey: 'nvapi-x' }, { fetch: (async () => ({ ok: true, status: 200, text: async () => '{}' })) as never });
+    const p = createProvider({ mode: 'key', provider: 'nvidia', summaries: true, describeImages: false }, { apiKey: 'nvapi-x' }, { fetch: (async () => ({ ok: true, status: 200, text: async () => '{}' })) as never });
     expect(p?.id).toBe('nvidia');
     expect(p?.capabilities()).toMatchObject({ chat: true, embed: true });
   });
@@ -286,8 +286,8 @@ describe('presets', () => {
       seen.push({ url, headers: init.headers });
       return { ok: true, status: 200, text: async () => JSON.stringify({ choices: [{ message: { content: 'hi' } }] }) };
     }) as never;
-    const p = createProvider({ mode: 'key', provider: 'nvidia', summaries: true }, { apiKey: 'nvapi-x' }, { fetch })!;
-    await p.complete({ system: 's', user: 'u' });
+    const p = createProvider({ mode: 'key', provider: 'nvidia', summaries: true, describeImages: false }, { apiKey: 'nvapi-x' }, { fetch })!;
+    await p.complete({ system: 's', user: 'u', maxTokens: 64 });
     expect(seen[0]!.url).toBe('https://integrate.api.nvidia.com/v1/chat/completions');
     expect(seen[0]!.headers.authorization).toBe('Bearer nvapi-x');
   });
